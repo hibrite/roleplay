@@ -7,7 +7,7 @@
         /* 老式電腦綠字黑底風格 */
         body {
             background-color: #000000;
-            color: #00ff00;
+            color: #a1a1a1;
             font-family: 'Courier New', Courier, monospace;
             margin: 0;
             padding: 20px;
@@ -19,7 +19,7 @@
         /* 側邊欄：帳號管理 */
         #sidebar {
             width: 250px;
-            border-right: 2px dashed #00ff00;
+            border-right: 2px dashed #a1a1a1;
             padding-right: 20px;
             display: flex;
             flex-direction: column;
@@ -33,7 +33,7 @@
         }
 
         h1, h2, h3 {
-            border-bottom: 1px solid #00ff00;
+            border-bottom: 1px solid #a1a1a1;
             padding-bottom: 5px;
             text-transform: uppercase;
         }
@@ -41,8 +41,8 @@
         /* 輸入框與按鈕的復古終端機樣式 */
         input[type="text"], textarea {
             background-color: #000000;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            border: 1px solid #a1a1a1;
+            color: #a1a1a1;
             font-family: 'Courier New', Courier, monospace;
             padding: 5px;
             width: 100%;
@@ -51,7 +51,7 @@
         }
 
         button {
-            background-color: #00ff00;
+            background-color: #a1a1a1;
             color: #000000;
             border: none;
             font-family: 'Courier New', Courier, monospace;
@@ -61,7 +61,7 @@
         }
 
         button:hover {
-            background-color: #00aa00;
+            background-color: #6e6e6e;
         }
 
         /* 帳號列表樣式 */
@@ -75,24 +75,24 @@
         }
 
         .user-item.active {
-            border: 1px solid #00ff00;
+            border: 1px solid #a1a1a1;
             background-color: #002200;
         }
 
         .user-item a {
-            color: #00ff00;
+            color: #a1a1a1;
             text-decoration: none;
         }
 
         .user-item .logout-btn {
-            color: #ff0000;
+            color: #992e2e;
             text-decoration: none;
             font-size: 12px;
         }
 
         /* 文章區塊 */
         .post {
-            border: 1px solid #00ff00;
+            border: 1px solid #a1a1a1;
             padding: 15px;
             margin-bottom: 20px;
             background-color: #050505;
@@ -100,14 +100,14 @@
 
         .post-meta {
             font-size: 12px;
-            color: #00aa00;
+            color: #6e6e6e;
             margin-bottom: 10px;
         }
 
         /* 留言區塊 */
         .comment-section {
             margin-top: 15px;
-            border-top: 1px dashed #00ff00;
+            border-top: 1px dashed #a1a1a1;
             padding-top: 10px;
         }
 
@@ -115,7 +115,7 @@
             font-size: 14px;
             margin-bottom: 5px;
             padding-left: 10px;
-            border-left: 2px solid #00ff00;
+            border-left: 2px solid #a1a1a1;
         }
     </style>
 </head>
@@ -132,7 +132,7 @@
         <h3>切換清單:</h3>
         <div>
             {% if not user_list %}
-                <p style="color: #00aa00;">(無建立帳號)</p>
+                <p style="color: #6e6e6e;">(無建立帳號)</p>
             {% endif %}
             {% for user in user_list %}
                 <div class="user-item {% if user == current_user %}active{% endif %}">
@@ -144,9 +144,9 @@
             {% endfor %}
         </div>
         
-        <div style="margin-top: auto; font-size: 12px; color: #00aa00;">
+        <div style="margin-top: auto; font-size: 12px; color: #6e6e6e;">
             當前操作者:<br>
-            <span style="color: #00ff00; font-size: 16px;">
+            <span style="color: #a1a1a1; font-size: 16px;">
                 {% if current_user %}{{ current_user }}{% else %}GUEST (訪客){% endif %}
             </span>
         </div>
@@ -165,7 +165,7 @@
                 </form>
             </div>
         {% else %}
-            <p style="color: #ff0000;">* 請在左側建立或選擇帳號以進行發文與留言。</p>
+            <p style="color: #992e2e;">* 請在左側建立或選擇帳號以進行發文與留言。</p>
         {% endif %}
 
         <h2>[ 佈告欄看板 ]</h2>
@@ -182,10 +182,10 @@
                         {% if comment.post_id == post.id %}
                             <div class="comment">
                                 <strong>{{ comment.author }}</strong>: {{ comment.content }} 
-                                <span style="font-size: 10px; color: #00aa00;">({{ comment.timestamp }})</span>
+                                <span style="font-size: 10px; color: #a1a1a1;">({{ comment.timestamp }})</span>
                             </div>
-                        {% endfor %}
-                    {% endif %}
+                        {% endif %}
+                    {% endfor %}
 
                     {% if current_user %}
                         <form action="/create_comment/{{ post.id }}" method="POST" style="margin-top: 10px; display: flex;">
