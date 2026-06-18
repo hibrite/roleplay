@@ -7,8 +7,7 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 DATABASE = 'database.db'
 # 強制在每次啟動網頁伺服器時，都檢查並初始化資料庫
-with app.app_context():
-    init_db()
+
 
 def get_db():
     db = getattr(g, '_database', None)
@@ -56,6 +55,9 @@ def init_db():
             )
         ''')
         db.commit()
+
+with app.app_context():
+    init_db()
 
 @app.route('/')
 def index():
