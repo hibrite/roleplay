@@ -6,6 +6,9 @@ app = Flask(__name__)
 # 設定密鑰以啟用 Session 功能，確保多人登入不串線
 app.secret_key = os.urandom(24)
 DATABASE = 'database.db'
+# 強制在每次啟動網頁伺服器時，都檢查並初始化資料庫
+with app.app_context():
+    init_db()
 
 def get_db():
     db = getattr(g, '_database', None)
