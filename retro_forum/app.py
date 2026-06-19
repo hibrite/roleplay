@@ -4,11 +4,10 @@ from psycopg2.extras import DictCursor
 from flask import Flask, render_template, request, redirect, url_for, session, g
 
 app = Flask(__name__)
-# 使用固定或安全的金鑰，避免雲端重啟時 Session 遺失
-app.secret_key = os.environ.get('SECRET_KEY', 'retro-secret-key-1999')
+app.secret_key = os.urandom(24)
 
 # ==========================================================
-# 妳從 Supabase 直接複製下來的完美網址（完全不用動它）
+# 這是妳從 Supabase 直接複製下來的網址（完全正確，不用動它）
 # ==========================================================
 DATABASE_URL = "postgresql://postgres:retroforum2026@db.jupusfomxhlxpyxmgega.supabase.co:5432/postgres"
 
@@ -60,8 +59,7 @@ def init_db():
 @app.route('/')
 def index():
     db = get_db()
-    # 每次首頁載入時順便檢查/建立資料表（這樣最安全，不會在啟動時猝死）
-    init_db()
+    init_db()  # 每次載入首頁時自動檢查並建立資料表
     
     with db.cursor() as cur:
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
@@ -145,6 +143,6 @@ def comment(post_id):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # 這行可以自動適應 Render 的雲端 Port 設定，本地、雲端都能跑
+    # 讓程式碼能自動適應本地端與 Render 雲端的連接埠需求
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
