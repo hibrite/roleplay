@@ -1,56 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-    <title>Retro Forum</title>
+    <meta charset="UTF-8">
+    <title>Retro Forum - 老式論壇</title>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
     <style>
-        #sidebar { float: left; width: 250px; padding: 20px; border-right: 1px solid #ccc; }
-        .modal { display:none; position:fixed; top:20%; left:30%; background:#fff; border:1px solid #000; padding:20px; }
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+        }
+        .dark-mode {
+            --bg-color: #000000;
+            --text-color: #aaaaaa; /* 夜間為灰字 */
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier Prime', monospace;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        /* 模仿老式螢幕的框線風格 */
+        .container { border: 2px solid var(--text-color); padding: 20px; max-width: 800px; margin: auto; }
+        input, textarea, button { font-family: 'Courier Prime', monospace; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--text-color); }
+        a { color: var(--text-color); }
+        #sidebar { border-right: 1px dashed var(--text-color); width: 200px; float: left; }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <h3>帳號管理</h3>
-    <form action="/login" method="POST">
-        <input type="text" name="username" placeholder="登入帳號" required>
-        <button type="submit">登入</button>
-    </form>
-    <br>
-    <form action="/register" method="POST">
-        <input type="text" name="username" placeholder="新帳號註冊" required>
-        <button type="submit">註冊</button>
-    </form>
+<div class="container">
+    <button onclick="toggleTheme()">切換日/夜模式</button>
+    
+    <div id="sidebar">
+        <h3>帳號管理</h3>
+        <form action="/login" method="POST">
+            <input type="text" name="username" placeholder="登入..." required>
+            <button type="submit">登入</button>
+        </form>
+        <br>
+        <form action="/register" method="POST">
+            <input type="text" name="username" placeholder="註冊..." required>
+            <button type="submit">註冊</button>
+        </form>
 
-    <h3>切換帳號</h3>
-    {% for user in users %}
-    <div>
-        <a href="#" onclick="alert('使用者: {{ user.username }}')">{{ user.username }}</a>
-        <a href="/switch_user/{{ user.username }}">[切換]</a>
-        <a href="/logout/{{ user.username }}">[登出]</a>
+        <h3>線上用戶</h3>
+        {% for user in users %}
+        <div>
+            > {{ user.username }} 
+            <a href="/switch_user/{{ user.username }}">[切換]</a>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
+
+    <div style="margin-left: 220px;">
+        {% if current_user %}
+        <h3>發表新主題 (User: {{ current_user }})</h3>
+        <form action="/create_post" method="POST">
+            <input type="text" name="title" placeholder="標題" required><br>
+            <textarea name="content" rows="3" placeholder="內容..." required></textarea><br>
+            <button type="submit">發布文章</button>
+        </form>
+        {% else %}
+        <p>請先登入或註冊。</p>
+        {% endif %}
+
+        <hr>
+        {% for post in posts %}
+        <div style="margin-bottom: 20px;">
+            <h4>[ {{ post.title }} ] by {{ post.username }}</h4>
+            <p>{{ post.content }}</p>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 
-<div style="margin-left: 280px;">
-    {% if current_user %}
-    <h3>發表新主題 (目前: {{ current_user }})</h3>
-    <form action="/create_post" method="POST">
-        <input type="text" name="title" placeholder="標題" required>
-        <textarea name="content" placeholder="內文" required></textarea>
-        <button type="submit">發布</button>
-    </form>
-    {% else %}
-    <p style="color:red;">請先登入或註冊以進行發文</p>
-    {% endif %}
-
-    <hr>
-    {% for post in posts %}
-    <div>
-        <h4>{{ post.title }} <small>by {{ post.username }}</small></h4>
-        <p>{{ post.content }}</p>
-    </div>
-    {% endfor %}
-</div>
+<script>
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+    }
+</script>
 
 </body>
 </html>
