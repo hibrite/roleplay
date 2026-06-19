@@ -32,12 +32,13 @@
         <h3>用戶清單:</h3>
         <div id="user-list-container">
             {% for user in user_list %}
-                <div class="user-item {% if user.username == current_user %}active{% endif %}" 
-                    style="border: 1px solid var(--border-color); padding: 10px; border-radius: 5px;">
+                <div class="user-item {% if user.username == current_user %}active{% endif %}">
                     
-                    <a href="/switch_user/{{ user.username }}" style="color:var(--text-color); text-decoration: none;">> {{ user.username }}</a>
+                    <a href="/switch_user/{{ user.username }}" style="color:var(--text-color); text-decoration: none; font-weight: bold;">
+                        > {{ user.username }}
+                    </a>
                     
-                    <div style="font-size: 0.8em; margin-top: 5px;">
+                    <div class="user-actions">
                         <button onclick="location.href='/logout/{{ user.username }}'">[登出]</button>
                         <button onclick="confirmDelete('{{ user.username }}')" style="color: #ff6b6b;">[註銷]</button>
                         <button onclick="openEditModal('{{ user.username }}', '{{ user.bio | replace("'", "\\'") }}')">[編輯]</button>
@@ -151,7 +152,7 @@
             }
         }
     </script>
-    
+
     <style>
         :root { 
             --bg-color: #000000; --text-color: #a1a1a1; --border-color: #a1a1a1; 
@@ -173,6 +174,25 @@
         #sidebar { width: 250px; border-right: 2px dashed var(--border-color); padding-right: 20px; display: flex; flex-direction: column; }
         #main-content { flex: 1; padding-left: 20px; overflow-y: auto; }
         .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; }
+        /* 1. 讓每個帳號區塊有間距 */
+        .user-item {
+            margin-bottom: 15px; /* 增加帳號之間的垂直距離 */
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* 2. 縮小按鈕並排顯示 */
+        .user-actions {
+            display: flex; /* 讓按鈕並排 */
+            gap: 5px;      /* 按鈕之間的間距 */
+            margin-top: 5px;
+        }
+
+        .btn-small {
+            padding: 2px 8px;  /* 縮小按鈕內距 */
+            font-size: 12px;   /* 縮小字體大小 */
+            cursor: pointer;
+        }
     </style>
 </body>
 </html>
