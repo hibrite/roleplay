@@ -2,6 +2,7 @@ import os
 import psycopg2
 from psycopg2.extras import DictCursor
 from flask import Flask, render_template, request, redirect, url_for, session, g, flash
+from flask import session
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -11,6 +12,18 @@ def get_db():
     if 'db' not in g:
         g.db = psycopg2.connect(DATABASE_URL, cursor_factory=DictCursor)
     return g.db
+
+def init_db():
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                username VARCHAR(50) PRIMARY KEY,
+                status VARCHAR(10) DEFAULT 'active',
+                current_device_id VARCHAR(100) DEFAULT NULL
+            )
+        ''')
+        db.commit()
 
 @app.teardown_appcontext
 def close_db(e):
@@ -49,14 +62,23 @@ def register():
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username').strip()
+    device_id = session.sid  # 獲取當前瀏覽器的唯一 session ID
     db = get_db()
     with db.cursor() as cur:
-        cur.execute('SELECT username FROM users WHERE username = %s', (username,))
-        if cur.fetchone():
-            # 重新設為 active，這樣側欄就會出現
-            cur.execute('UPDATE users SET status = %s WHERE username = %s', ('active', username))
-            db.commit()
-            session['current_user'] = username
+        # 檢查帳號是否存在
+        cur.execute('SELECT current_device_id FROM users WHERE username = %s', (username,))
+        user = cur.fetchone()
+        
+        if user:
+            # 判斷是否已被其他人登入 (current_device_id 不為空且不是自己)
+            if user['current_device_id'] and user['current_device_id'] != device_id:
+                flash('此帳號已在其他裝置登入，請先於該裝置登出！', 'error')
+            else:
+                # 登入成功，鎖定此裝置
+                cur.execute('UPDATE users SET status = %s, current_device_id = %s WHERE username = %s', 
+                            ('active', device_id, username))
+                db.commit()
+                session['current_user'] = username
         else:
             flash('查無此帳號！', 'error')
     return redirect(url_for('index'))
@@ -82,10 +104,10 @@ def delete_user(username):
 def logout_user(username):
     db = get_db()
     with db.cursor() as cur:
-        # 將狀態改為隱藏
-        cur.execute('UPDATE users SET status = %s WHERE username = %s', ('hidden', username))
+        # 登出時，解除裝置鎖定並隱藏帳號
+        cur.execute('UPDATE users SET status = %s, current_device_id = NULL WHERE username = %s', 
+                    ('hidden', username))
         db.commit()
-        # 如果是目前登入者，清除 session
         if session.get('current_user') == username:
             session.pop('current_user', None)
     return redirect(url_for('index'))
