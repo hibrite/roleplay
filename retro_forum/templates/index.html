@@ -4,87 +4,51 @@
     <meta charset="UTF-8">
     <title>RETRO_BBS_FORUM // 老式論壇</title>
     <style>
-        /* CSS 變數：用於日夜模式切換 */
-        :root {
-            --bg-color: #000000;
-            --text-color: #a1a1a1;
-            --border-color: #a1a1a1;
-        }
-        .day-mode {
-            --bg-color: #ffffff;
-            --text-color: #000000;
-            --border-color: #000000;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            height: 100vh;
-            box-sizing: border-box;
-            transition: all 0.3s ease;
-        }
-
+        :root { --bg-color: #000000; --text-color: #a1a1a1; --border-color: #a1a1a1; }
+        .day-mode { --bg-color: #ffffff; --text-color: #000000; --border-color: #000000; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', monospace; margin: 0; padding: 20px; display: flex; height: 100vh; transition: all 0.3s; }
         #sidebar { width: 250px; border-right: 2px dashed var(--border-color); padding-right: 20px; display: flex; flex-direction: column; }
         #main-content { flex: 1; padding-left: 20px; overflow-y: auto; }
-
-        h1, h2, h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; text-transform: uppercase; }
-        input, textarea { background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); font-family: inherit; padding: 5px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
-        button { background-color: var(--border-color); color: var(--bg-color); border: none; font-family: inherit; padding: 5px 10px; cursor: pointer; font-weight: bold; }
-        
-        .user-item { display: flex; justify-content: space-between; padding: 5px; border: 1px solid transparent; }
-        .user-item.active { border: 1px solid var(--border-color); }
-        .user-item a { color: var(--text-color); text-decoration: none; }
+        input, textarea, button { background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); font-family: inherit; width: 100%; margin-bottom: 10px; }
         .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; }
+        .active { border: 1px solid var(--border-color); background: #222; }
     </style>
 </head>
 <body>
-
     <div id="sidebar">
-        <h3>切換清單:</h3>
-        <div>
-            {% if not user_list %}
-                <p style="color: #6e6e6e;">(無建立帳號)</p>
-            {% endif %}
-            
-            {% for user in user_list %}
-                <div class="user-item {% if user == current_user %}active{% endif %}">
-                    <a href="/switch_user/{{ user }}">
-                        {% if user == current_user %}* {% endif %}{{ user }}
-                    </a>
-                    <a href="/logout/{{ user }}" class="logout-btn">[X]</a>
-                </div>
-            {% endfor %}
-        </div>
-        
-        <div style="margin-top: auto; font-size: 12px; color: #6e6e6e;">
-            當前操作者:<br>
-            <span style="color: #a1a1a1; font-size: 16px;">
-                {% if current_user %}{{ current_user }}{% else %}GUEST (訪客){% endif %}
-            </span>
-        </div>
+        <button onclick="document.body.classList.toggle('day-mode')">切換 明/暗 風格</button>
+        <h2>[ ACCOUNTS ]</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, msg in messages %}<p style="color:red">* {{ msg }}</p>{% endfor %}{% endif %}
+        {% endwith %}
+        <form action="/login" method="POST">
+            <input type="text" name="username" placeholder="登入舊帳號..." required>
+            <button type="submit">登入</button>
+        </form>
+        <form action="/register" method="POST">
+            <input type="text" name="username" placeholder="註冊新帳號..." required>
+            <button type="submit">註冊</button>
+        </form>
+        <h3>用戶清單:</h3>
+        {% for user in user_list %}
+            <div class="user-item {% if user == current_user %}active{% endif %}">
+                <a href="/switch_user/{{ user }}" style="color:var(--text-color)">{{ user }}</a>
+                <a href="/logout/{{ user }}" style="color:red">[X]</a>
+            </div>
+        {% endfor %}
     </div>
-
     <div id="main-content">
         <h1>=== RETRO ELECTRONIC BULLETIN BOARD ===</h1>
-
         {% if current_user %}
             <div class="post">
-                <h3>發表新主題 (使用者: {{ current_user }})</h3>
+                <h3>發表新主題 (目前: {{ current_user }})</h3>
                 <form action="/create_post" method="POST">
                     <input type="text" name="title" placeholder="標題..." required>
                     <textarea name="content" rows="4" placeholder="內容..." required></textarea>
-                    <button type="submit">發布文章</button>
+                    <button type="submit">發布</button>
                 </form>
             </div>
-        {% else %}
-            <p style="color: red;">* 請先登入或註冊以進行發文。</p>
         {% endif %}
-
-        <h2>[ 佈告欄 ]</h2>
         {% for post in posts %}
             <div class="post">
                 <h3>{{ post.title }}</h3>
@@ -93,6 +57,5 @@
             </div>
         {% endfor %}
     </div>
-
 </body>
 </html>
