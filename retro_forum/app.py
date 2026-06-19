@@ -16,11 +16,12 @@ def get_db():
 def init_db():
     db = get_db()
     with db.cursor() as cur:
+        # 修改類型為 TEXT
         cur.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 username VARCHAR(50) PRIMARY KEY,
-                status VARCHAR(10) DEFAULT 'active',
-                current_device_id VARCHAR(100) DEFAULT NULL
+                status VARCHAR(10) DEFAULT 'hidden',
+                current_device_id TEXT DEFAULT NULL
             )
         ''')
         db.commit()
