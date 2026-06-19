@@ -1,8 +1,10 @@
 import os
 import psycopg2
+import json
 from psycopg2.extras import DictCursor
 from flask import Flask, render_template, request, redirect, url_for, session, g, flash
 from flask import session
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -164,6 +166,41 @@ def update_profile(old_username):
         # 如果正在登入中，同步更新 session
         if session.get('current_user') == old_username:
             session['current_user'] = new_username
+            
+    return redirect(url_for('index'))
+
+@app.route('/delete_post/<int:post_id>')
+def delete_post(post_id):
+    current_user = session.get('current_user')
+    db = get_db()
+    with db.cursor() as cur:
+        # 檢查該貼文是否屬於當前用戶，防止惡意刪除他人貼文
+        cur.execute('UPDATE posts SET status = %s WHERE id = %s AND username = %s', 
+                    ('deleted', post_id, current_user))
+        db.commit()
+    return redirect(url_for('index'))
+
+@app.route('/edit_post/<int:post_id>', methods=['POST'])
+def edit_post(post_id):
+    current_user = session.get('current_user')
+    new_title = request.form['title']
+    new_content = request.form['content']
+    
+    db = get_db()
+    with db.cursor() as cur:
+        # 1. 取得舊資料以寫入歷史
+        cur.execute('SELECT content, edit_history FROM posts WHERE id = %s AND username = %s', (post_id, current_user))
+        post = cur.fetchone()
+        
+        if post:
+            history = json.loads(post['edit_history'])
+            history.append({'content': post['content'], 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M')})
+            
+            # 2. 更新資料
+            cur.execute('''UPDATE posts SET title = %s, content = %s, is_edited = TRUE, edit_history = %s 
+                           WHERE id = %s''', 
+                        (new_title, new_content, json.dumps(history), post_id))
+            db.commit()
             
     return redirect(url_for('index'))
 
