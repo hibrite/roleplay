@@ -63,9 +63,23 @@
         {% endif %}
         {% for post in posts %}
             <div class="post">
-                <h3>{{ post.title }}</h3>
-                <small>By: {{ post.username }}</small>
-                <p>{{ post.content }}</p>
+                {% if post.status == 'deleted' %}
+                    <p><i>[ 此貼文已刪除 ]</i></p>
+                {% else %}
+                    <h3>
+                        {{ post.title }}
+                        {% if post.is_edited %}
+                            <span onclick="showEditHistory('{{ post.edit_history | replace("'", "\\'") }}')" 
+                                style="cursor:pointer; color:gray; font-size: 0.6em; text-decoration: underline;">[已編輯]</span>
+                        {% endif %}
+                    </h3>
+                    <small>By: {{ post.username }}</small>
+                    <p>{{ post.content }}</p>
+
+                    {% if post.username == current_user %}
+                        <button onclick="location.href='/delete_post/{{ post.id }}'">刪除</button>
+                    {% endif %}
+                {% endif %}
             </div>
         {% endfor %}
     </div>
@@ -109,6 +123,35 @@
     function confirmDelete(username) {
         if (confirm('確定要註銷帳號 "' + username + '" 嗎？')) {
             location.href = '/delete_user/' + username;
+        }
+    }
+    /* 這裡定義一個共用的選定狀態顏色 */
+    .user-item.active {
+        /* 在深色模式下會顯得比周圍淺 (rgba白色疊加) */
+        /* 在淺色模式下，因為切換了 .day-mode，這裡會變為深灰色 */
+        background-color: var(--active-bg) !important;
+        border: 1px solid var(--text-color) !important;
+    }
+
+    :root { 
+        --bg-color: #000000; --text-color: #a1a1a1; --border-color: #a1a1a1; 
+        --active-bg: rgba(255, 255, 255, 0.15); /* 深色模式下的選定背景 */
+    }
+    .day-mode { 
+        --bg-color: #ffffff; --text-color: #000000; --border-color: #000000; 
+        --active-bg: rgba(0, 0, 0, 0.15); /* 淺色模式下的選定背景 */
+    }
+
+    function showEditHistory(historyJson) {
+        try {
+            const history = JSON.parse(historyJson);
+            let msg = "編輯紀錄：\n";
+            history.forEach((h, i) => {
+                msg += (i + 1) + ". " + h.content + " (" + h.timestamp + ")\n";
+            });
+            alert(msg);
+        } catch (e) {
+            alert("無編輯紀錄");
         }
     }
     </script>
