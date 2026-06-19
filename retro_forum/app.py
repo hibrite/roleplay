@@ -87,3 +87,22 @@ def logout():
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+# app.py 新增這兩個路由
+@app.route('/profile/<username>')
+def profile(username):
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('SELECT * FROM users WHERE username = %s', (username,))
+        user = cur.fetchone()
+    return render_template('profile.html', user=user) # 你需要建立這個樣板
+
+@app.route('/update_bio', methods=['POST'])
+def update_bio():
+    if 'current_user' not in session: return redirect(url_for('index'))
+    new_bio = request.form.get('bio')
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('UPDATE users SET bio = %s WHERE username = %s', (new_bio, session['current_user']))
+        db.commit()
+    return redirect(url_for('index'))
