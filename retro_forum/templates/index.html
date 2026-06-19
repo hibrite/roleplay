@@ -19,7 +19,7 @@
         <button onclick="document.body.classList.toggle('day-mode')">切換 明/暗 風格</button>
         <h2>[ ACCOUNTS ]</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}{% for category, msg in messages %}<p style="color:red">* {{ msg }}</p>{% endfor %}{% endif %}
+            {% if messages %}{% for category, msg in messages %}<p style="color:rgb(169, 6, 6)">* {{ msg }}</p>{% endfor %}{% endif %}
         {% endwith %}
         <form action="/login" method="POST">
             <input type="text" name="username" placeholder="登入舊帳號..." required>
@@ -30,16 +30,20 @@
             <button type="submit">註冊</button>
         </form>
         <h3>用戶清單:</h3>
-        {% for user in user_list %}
-            <div class="user-item {% if user == current_user %}active{% endif %}">
-                <a href="/switch_user/{{ user }}">{{ user }}</a>
-                <br>
-                <small>
-                    <a href="/logout/{{ user }}">登出</a> | 
-                    <a href="/delete_user/{{ user }}" style="color:red">註銷</a>
-                </small>
-            </div>
-        {% endfor %}
+        <div id="user-list-container" style="display: flex; flex-direction: column; gap: 10px;">
+            {% for user in user_list %}
+                <div class="user-item {% if user == current_user %}active{% endif %}" 
+                    style="border: 1px solid var(--border-color); padding: 10px; border-radius: 5px; background: rgba(255,255,255,0.05);">
+                    <div style="font-weight: bold; margin-bottom: 5px;">
+                        <a href="/switch_user/{{ user }}" style="color:var(--text-color); text-decoration: none;">> {{ user }}</a>
+                    </div>
+                    <div style="border-top: 1px solid var(--border-color); padding-top: 5px; font-size: 0.8em;">
+                        <a href="/logout/{{ user }}" style="color: var(--text-color);">[登出]</a> 
+                        <a href="/delete_user/{{ user }}" style="color: #ff6b6b; margin-left: 10px;">[註銷]</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
     </div>
     <div id="main-content">
         <h1>=== Midnight Signal Forum ===</h1>
