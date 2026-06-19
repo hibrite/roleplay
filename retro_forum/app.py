@@ -128,23 +128,29 @@ def switch_user(username):
 def delete_user(username):
     db = get_db()
     with db.cursor() as cur:
-        # 1. 檢查該帳號目前是否已經被標記為 deleted
-        # 我們假設如果 status 是 'deleted'，就不需要再做字串處理
+        # 1. 確保只處理非已刪除狀態的帳號，防止重複疊加
         cur.execute('SELECT status FROM users WHERE username = %s', (username,))
-        result = cur.fetchone()
+        user = cur.fetchone()
         
-        if result and result['status'] != 'deleted':
-            # 只有當帳號是 'active' 或其他狀態時，才執行「改名與註銷」
-            new_name = f"{username}_deleted_{int(datetime.now().timestamp())}"
+        if user and user['status'] != 'deleted':
+            # 建立一個唯一的刪除後名稱
+            timestamp = int(datetime.now().timestamp())
+            new_name = f"{username}_deleted_{timestamp}"
+            
+            # 2. 更新使用者名稱與狀態
             cur.execute('UPDATE users SET username = %s, status = %s WHERE username = %s', 
                         (new_name, 'deleted', username))
             
-            # 同步更新該用戶發過的貼文名稱 (這能確保貼文作者顯示一致)
+            # 3. 同步修改該用戶發出的所有貼文名稱 (關鍵步驟！)
             cur.execute('UPDATE posts SET username = %s WHERE username = %s', 
                         (new_name, username))
+            
             db.commit()
-        
-        # 2. 如果該帳號剛好是目前登入的，執行強制登出
+            flash(f'帳號 {username} 已成功註銷。', 'success')
+        else:
+            flash('此帳號已註銷或不存在。', 'error')
+
+        # 4. 如果目前登入的是此帳號，強制登出
         if session.get('current_user') == username:
             session.pop('current_user', None)
             
