@@ -2,9 +2,13 @@ import os
 import psycopg2
 from psycopg2.extras import DictCursor
 from flask import Flask, render_template, request, redirect, url_for, session, g
+from whitenoise import WhiteNoise  # 修正1：引入白噪音處理靜態檔案
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
+# 讓 WhiteNoise 幫忙代理靜態資料夾（CSS/JS等），這能確保在 Render 上樣式不會跑掉
+app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 
 # ==========================================================
 # 這是妳從 Supabase 直接複製下來的網址（完全正確，不用動它）
@@ -23,6 +27,7 @@ def close_db(e):
         db.close()
 
 def init_db():
+    """ 負責在雲端建立資料表的函式 """
     db = get_db()
     with db.cursor() as cur:
         # 建立使用者資料表
@@ -56,10 +61,23 @@ def init_db():
         ''')
         db.commit()
 
+# 修正2：使用 Flask 的 before_request 旗標，確保全伺服器開機時「只執行一次」資料庫初始化
+_db_initialized = False
+
+@app.before_request
+def auto_init_db():
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            init_db()
+            _db_initialized = True
+        except Exception as e:
+            print(f"資料庫初始化失敗，錯誤原因: {e}")
+
 @app.route('/')
 def index():
     db = get_db()
-    init_db()  # 每次載入首頁時自動檢查並建立資料表
+    # 修正3：已經移到上面去了，首頁這裡不再重複呼叫 init_db()，大幅提升網頁載入速度！
     
     with db.cursor() as cur:
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
@@ -137,12 +155,11 @@ def comment(post_id):
     
     db = get_db()
     with db.cursor() as cur:
-        cur.execute('INSERT INTO comments (post_id, username, content) VALUES (%s, %s, %s)', (post_id, username, content))
+        cur.execute('INSERT INTO comments (post_id, username, content) VALUES (%s, %s)', (post_id, username, content))
         db.commit()
         
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # 讓程式碼能自動適應本地端與 Render 雲端的連接埠需求
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
