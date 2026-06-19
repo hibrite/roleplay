@@ -6,9 +6,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, g
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# ==========================================
-# 【請在這裡填入你剛剛在 Supabase 複製的 URI 網址】
-# ==========================================
+# ==========================================================
+# 【請在這裡保留你的 Supabase Connection URL 網址】
+# 也就是你上一次在記事本裡，後面自帶那一長串密碼的完整網址
+# ==========================================================
 DATABASE_URL = "postgresql://postgres:retroforum2026@db.jupusfomxhlxpyxmgega.supabase.co:5432/postgres"
 
 def get_db():
@@ -140,6 +141,7 @@ def comment(post_id):
     
     db = get_db()
     with db.cursor() as cur:
+        # 修正重點：這裡原本不小心寫成舊的 SQLite 語法了，現在徹底改成 PostgreSQL 專用的 %s
         cur.execute('INSERT INTO comments (post_id, username, content) VALUES (%s, %s, %s)', (post_id, username, content))
         db.commit()
         
