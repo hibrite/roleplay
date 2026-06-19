@@ -65,21 +65,20 @@ def register():
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username').strip()
-    device_id = session.sid  # 獲取當前瀏覽器的唯一 session ID
     db = get_db()
     with db.cursor() as cur:
-        # 檢查帳號是否存在
-        cur.execute('SELECT current_device_id FROM users WHERE username = %s', (username,))
+        # 1. 檢查帳號是否存在，並確認目前的狀態
+        cur.execute('SELECT status FROM users WHERE username = %s', (username,))
         user = cur.fetchone()
         
         if user:
-            # 判斷是否已被其他人登入 (current_device_id 不為空且不是自己)
-            if user['current_device_id'] and user['current_device_id'] != device_id:
+            # 2. 如果狀態已經是 'active'，表示已經在其他地方登入了
+            if user['status'] == 'active':
                 flash('此帳號已在其他裝置登入，請先於該裝置登出！', 'error')
             else:
-                # 登入成功，鎖定此裝置
-                cur.execute('UPDATE users SET status = %s, current_device_id = %s WHERE username = %s', 
-                            ('active', device_id, username))
+                # 3. 狀態為 'hidden' 才允許登入
+                cur.execute('UPDATE users SET status = %s WHERE username = %s', 
+                            ('active', username))
                 db.commit()
                 session['current_user'] = username
         else:
