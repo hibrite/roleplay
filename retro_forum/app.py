@@ -67,15 +67,15 @@ def index():
     
     db = get_db()
     with db.cursor() as cur:
-        # 1. 撈取「活動中」的用戶列表 (解決註銷後依然出現在清單的問題)
+        # 正確的寫法：只需要一次 SELECT
         cur.execute('SELECT username, bio FROM users WHERE status = %s', ('active',))
         user_list = cur.fetchall()
         
-        # 2. 撈取貼文 (status != 'deleted' 的貼文)
-        cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY timestamp DESC', ('deleted',))
+        # 撈取貼文
+        cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY id DESC', ('deleted',))
         posts = cur.fetchall()
         
-    # 設定 Response，把 device_id 塞進 Cookie 存起來
+    # 設定 Response
     resp = make_response(render_template('index.html', user_list=user_list, posts=posts, current_user=session.get('current_user')))
     resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10)
     return resp
