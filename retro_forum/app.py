@@ -37,16 +37,18 @@ with app.app_context():
 @app.route('/')
 def index():
     db = get_db()
-    # 修正：改用 request.remote_addr 作為裝置識別 ID
-    device_id = request.remote_addr 
+    # 結合 IP 與 User-Agent 作為唯一設備識別碼
+    device_id = request.remote_addr + request.headers.get('User-Agent', '')
     
     with db.cursor() as cur:
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
         
-        # 只抓取該 IP 綁定的帳號
-        cur.execute('SELECT username FROM users WHERE status = %s AND current_device_id = %s', 
-                    ('active', device_id))
+        # 關鍵：只查詢「綁定在當前設備」且「狀態為 active」的帳號
+        cur.execute('''
+            SELECT username FROM users 
+            WHERE status = %s AND current_device_id = %s
+        ''', ('active', device_id))
         user_list = [row['username'] for row in cur.fetchall()]
         
     return render_template('index.html', posts=posts, user_list=user_list, current_user=session.get('current_user'))
@@ -54,7 +56,7 @@ def index():
 @app.route('/register', methods=['POST'])
 def register():
     username = request.form.get('username').strip()
-    device_id = request.remote_addr
+    device_id = request.remote_addr + request.headers.get('User-Agent', '')
     if not username: return redirect(url_for('index'))
     db = get_db()
     with db.cursor() as cur:
@@ -62,7 +64,7 @@ def register():
         if cur.fetchone():
             flash('此帳號已存在，請更換名稱！', 'error')
         else:
-            # 修正：一定要存入 device_id
+            # 存入 status 為 active 與目前的 device_id
             cur.execute('INSERT INTO users (username, status, current_device_id) VALUES (%s, %s, %s)', 
                         (username, 'active', device_id))
             db.commit()
@@ -72,18 +74,18 @@ def register():
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username').strip()
-    device_id = request.remote_addr
+    device_id = request.remote_addr + request.headers.get('User-Agent', '')
     db = get_db()
     with db.cursor() as cur:
         cur.execute('SELECT status, current_device_id FROM users WHERE username = %s', (username,))
         user = cur.fetchone()
         
         if user:
-            # 檢查是否已在其他 IP 登入 (current_device_id 必須也要檢查)
+            # 如果帳號已經是 active 且 device_id 不符，阻擋登入
             if user['status'] == 'active' and user['current_device_id'] != device_id:
                 flash('此帳號已在其他裝置登入！', 'error')
             else:
-                # 登入成功：更新 status 與目前的裝置 IP
+                # 允許登入並更新該設備的 ID
                 cur.execute('UPDATE users SET status = %s, current_device_id = %s WHERE username = %s', 
                             ('active', device_id, username))
                 db.commit()
@@ -113,7 +115,7 @@ def delete_user(username):
 def logout_user(username):
     db = get_db()
     with db.cursor() as cur:
-        # 登出時，解除裝置鎖定並隱藏帳號
+        # 解除狀態並清空 device_id
         cur.execute('UPDATE users SET status = %s, current_device_id = NULL WHERE username = %s', 
                     ('hidden', username))
         db.commit()
