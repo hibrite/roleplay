@@ -22,11 +22,21 @@ def close_db(e):
 def index():
     db = get_db()
     with db.cursor() as cur:
+        # 1. 獲取文章
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
-        cur.execute('SELECT * FROM users')
-        users = cur.fetchall()
-    return render_template('index.html', posts=posts, users=users, current_user=session.get('current_user'))
+        
+        # 2. 獲取所有使用者列表 (確保這裡撈取的是 username 欄位)
+        cur.execute('SELECT username FROM users')
+        # 將結果轉換為單純的清單 ['user1', 'user2']，方便前端迴圈
+        user_list = [row['username'] for row in cur.fetchall()]
+        
+    return render_template(
+        'index.html', 
+        posts=posts, 
+        user_list=user_list,  # 確保傳遞這個變數
+        current_user=session.get('current_user')
+    )
 
 @app.route('/register', methods=['POST'])
 def register():
