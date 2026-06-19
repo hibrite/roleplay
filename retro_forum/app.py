@@ -60,6 +60,7 @@ def index():
         ''', ('active', device_id))
         
         # 將結果存為物件陣列，沒有內容時回傳空字串
+        # 確保這一段在 app.py 的 index 函數內
         user_list = [
             {'username': row['username'], 'bio': row['bio'] if row['bio'] else ''} 
             for row in cur.fetchall()
