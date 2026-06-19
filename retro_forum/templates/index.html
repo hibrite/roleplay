@@ -44,26 +44,28 @@
 <body>
 
     <div id="sidebar">
-        <button onclick="document.body.classList.toggle('day-mode')">切換 明/暗 風格</button>
-        <h2>[ ACCOUNTS ]</h2>
-        
-        <form action="/login" method="POST">
-            <input type="text" name="username" placeholder="登入帳號..." required>
-            <button type="submit">登入</button>
-        </form>
-        <hr style="width:100%">
-        <form action="/register" method="POST">
-            <input type="text" name="username" placeholder="註冊新帳號..." required>
-            <button type="submit">註冊</button>
-        </form>
-
         <h3>切換清單:</h3>
-        {% for user in user_list %}
-            <div class="user-item {% if user == current_user %}active{% endif %}">
-                <a href="/switch_user/{{ user }}">{{ user }}</a>
-                <a href="/logout/{{ user }}" style="color:red">[X]</a>
-            </div>
-        {% endfor %}
+        <div>
+            {% if not user_list %}
+                <p style="color: #6e6e6e;">(無建立帳號)</p>
+            {% endif %}
+            
+            {% for user in user_list %}
+                <div class="user-item {% if user == current_user %}active{% endif %}">
+                    <a href="/switch_user/{{ user }}">
+                        {% if user == current_user %}* {% endif %}{{ user }}
+                    </a>
+                    <a href="/logout/{{ user }}" class="logout-btn">[X]</a>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div style="margin-top: auto; font-size: 12px; color: #6e6e6e;">
+            當前操作者:<br>
+            <span style="color: #a1a1a1; font-size: 16px;">
+                {% if current_user %}{{ current_user }}{% else %}GUEST (訪客){% endif %}
+            </span>
+        </div>
     </div>
 
     <div id="main-content">
