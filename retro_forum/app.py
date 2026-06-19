@@ -18,25 +18,6 @@ def close_db(e):
     if db is not None:
         db.close()
 
-@app.route('/delete_user/<username>')
-def delete_user(username):
-    db = get_db()
-    with db.cursor() as cur:
-        # 刪除該使用者
-        cur.execute('DELETE FROM users WHERE username = %s', (username,))
-        db.commit()
-        # 如果剛好是目前登入的使用者，執行登出
-        if session.get('current_user') == username:
-            session.pop('current_user', None)
-    return redirect(url_for('index'))
-
-@app.route('/logout/<username>')
-def logout_user(username):
-    if session.get('current_user') == username:
-        session.pop('current_user', None)
-    return redirect(url_for('index'))
-
-
 @app.route('/')
 def index():
     db = get_db()
@@ -85,6 +66,18 @@ def login():
 @app.route('/switch_user/<username>')
 def switch_user(username):
     session['current_user'] = username
+    return redirect(url_for('index'))
+
+@app.route('/delete_user/<username>')
+def delete_user(username):
+    db = get_db()
+    with db.cursor() as cur:
+        # 刪除該使用者
+        cur.execute('DELETE FROM users WHERE username = %s', (username,))
+        db.commit()
+        # 如果剛好是目前登入的使用者，執行登出
+        if session.get('current_user') == username:
+            session.pop('current_user', None)
     return redirect(url_for('index'))
 
 @app.route('/logout/<username>')
