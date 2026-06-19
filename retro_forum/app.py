@@ -9,7 +9,7 @@ app.secret_key = os.urandom(24)
 # ==========================================
 # 【請在這裡填入你剛剛在 Supabase 複製的 URI 網址】
 # ==========================================
-DATABASE_URL = "postgresql://postgres:c!XC94s56MHMZB#@db.jupusfomxhlxpyxmgega.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://postgres:c!XC94s56MHMZB%23@db.jupusfomxhlxpyxmgega.supabase.co:5432/postgres"
 
 def get_db():
     if 'db' not in g:
