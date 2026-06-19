@@ -37,20 +37,16 @@ with app.app_context():
 @app.route('/')
 def index():
     db = get_db()
-    device_id = session.sid  # 獲取當前裝置的唯一 ID
+    # 修正：改用 request.remote_addr 作為裝置識別 ID
+    device_id = request.remote_addr 
     
     with db.cursor() as cur:
-        # 抓取所有貼文
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
         
-        # 關鍵修改：只抓取「狀態為 active」且「綁定在當前裝置」的用戶
-        # 這樣一來，只有在當前裝置登入的帳號才會出現在清單中
-        cur.execute('''
-            SELECT username FROM users 
-            WHERE status = %s AND current_device_id = %s
-        ''', ('active', device_id))
-        
+        # 只抓取該 IP 綁定的帳號
+        cur.execute('SELECT username FROM users WHERE status = %s AND current_device_id = %s', 
+                    ('active', device_id))
         user_list = [row['username'] for row in cur.fetchall()]
         
     return render_template('index.html', posts=posts, user_list=user_list, current_user=session.get('current_user'))
@@ -58,6 +54,7 @@ def index():
 @app.route('/register', methods=['POST'])
 def register():
     username = request.form.get('username').strip()
+    device_id = request.remote_addr
     if not username: return redirect(url_for('index'))
     db = get_db()
     with db.cursor() as cur:
@@ -65,7 +62,9 @@ def register():
         if cur.fetchone():
             flash('此帳號已存在，請更換名稱！', 'error')
         else:
-            cur.execute('INSERT INTO users (username) VALUES (%s)', (username,))
+            # 修正：一定要存入 device_id
+            cur.execute('INSERT INTO users (username, status, current_device_id) VALUES (%s, %s, %s)', 
+                        (username, 'active', device_id))
             db.commit()
             session['current_user'] = username
     return redirect(url_for('index'))
@@ -73,20 +72,20 @@ def register():
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username').strip()
+    device_id = request.remote_addr
     db = get_db()
     with db.cursor() as cur:
-        # 1. 檢查帳號是否存在，並確認目前的狀態
-        cur.execute('SELECT status FROM users WHERE username = %s', (username,))
+        cur.execute('SELECT status, current_device_id FROM users WHERE username = %s', (username,))
         user = cur.fetchone()
         
         if user:
-            # 2. 如果狀態已經是 'active'，表示已經在其他地方登入了
-            if user['status'] == 'active':
-                flash('此帳號已在其他裝置登入，請先於該裝置登出！', 'error')
+            # 檢查是否已在其他 IP 登入 (current_device_id 必須也要檢查)
+            if user['status'] == 'active' and user['current_device_id'] != device_id:
+                flash('此帳號已在其他裝置登入！', 'error')
             else:
-                # 3. 狀態為 'hidden' 才允許登入
-                cur.execute('UPDATE users SET status = %s WHERE username = %s', 
-                            ('active', username))
+                # 登入成功：更新 status 與目前的裝置 IP
+                cur.execute('UPDATE users SET status = %s, current_device_id = %s WHERE username = %s', 
+                            ('active', device_id, username))
                 db.commit()
                 session['current_user'] = username
         else:
