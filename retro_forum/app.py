@@ -80,16 +80,16 @@ def index():
 
 @app.route('/register', methods=['POST'])
 def register():
-    username = request.form.get('username').strip()
+    username = request.form.get('username', '').strip()
     device_id = get_device_id()
     if not username: return redirect(url_for('index'))
+
     db = get_db()
     with db.cursor() as cur:
-        cur.execute('SELECT username FROM users WHERE username = %s', (username,))
+        cur.execute('SELECT username FROM users WHERE username = %s AND status != %s', (username, 'deleted'))
         if cur.fetchone():
             flash('此帳號已存在，請更換名稱！', 'error')
         else:
-            # 存入 status 為 active 與目前的 device_id
             cur.execute('INSERT INTO users (username, status, current_device_id) VALUES (%s, %s, %s)', 
                         (username, 'active', device_id))
             db.commit()
@@ -128,10 +128,10 @@ def switch_user(username):
 def delete_user(username):
     db = get_db()
     with db.cursor() as cur:
-        # 刪除該使用者
-        cur.execute('DELETE FROM users WHERE username = %s', (username,))
+        # 將帳號設為 deleted，並把名稱加上 timestamp 以釋放原名稱
+        new_name = f"{username}_deleted_{int(datetime.now().timestamp())}"
+        cur.execute('UPDATE users SET username = %s, status = %s WHERE username = %s', (new_name, 'deleted', username))
         db.commit()
-        # 如果剛好是目前登入的使用者，執行登出
         if session.get('current_user') == username:
             session.pop('current_user', None)
     return redirect(url_for('index'))
