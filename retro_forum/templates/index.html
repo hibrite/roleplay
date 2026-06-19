@@ -68,23 +68,18 @@
                     <h3>
                         {{ post.title }}
                         {% if post.is_edited %}
-                            <span onclick="showEditHistory('{{ post.edit_history | replace("'", "\\'") }}')" 
-                                style="cursor:pointer; color:gray; font-size: 0.6em; text-decoration: underline;">[已編輯]</span>
+                            <span onclick="openHistoryModal('{{ post.edit_history | replace("'", "\\'") }}')" 
+                                style="cursor:pointer; color:gray; font-size: 0.8em; text-decoration: underline;">
+                                [查看紀錄]
+                            </span>
                         {% endif %}
                     </h3>
 
-                    <small>By: 
-                        {% if '_deleted_' in post.username %}
-                            <span style="color: #999;">(已註銷帳號)</span>
-                        {% else %}
-                            {{ post.username }}
-                        {% endif %}
-                    </small>
-
+                    <small>By: {{ post.username }}</small>
                     <p>{{ post.content }}</p>
 
                     {% if post.username == current_user and '_deleted_' not in post.username %}
-                        <button onclick="location.href='/delete_post/{{ post.id }}'">刪除</button>
+                        <button onclick="confirmDeletePost('{{ post.id }}')">刪除</button>
                         <button onclick="openEditPostModal('{{ post.id }}', '{{ post.title | replace("'", "\\'") }}', '{{ post.content | replace("'", "\\'") }}')">編輯</button>
                     {% endif %}
                 {% endif %}
@@ -159,6 +154,32 @@
                 alert("無編輯紀錄");
             }
         }
+        // 開啟歷史紀錄視窗
+        function openHistoryModal(historyJson) {
+            const historyDiv = document.getElementById('historyContent');
+            // 解析並顯示歷史紀錄
+            try {
+                const history = JSON.parse(historyJson);
+                historyDiv.innerHTML = history.map(h => 
+                    `<p>時間: ${h.timestamp}<br>內容: ${h.content}</p><hr>`
+                ).join('');
+            } catch(e) {
+                historyDiv.innerHTML = "無編輯紀錄";
+            }
+            document.getElementById('historyModal').style.display = 'block';
+        }
+
+        // 通用關閉視窗函數
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // 刪除貼文確認
+        function confirmDeletePost(postId) {
+            if (confirm('確定要刪除這篇貼文嗎？此動作無法復原。')) {
+                location.href = '/delete_post/' + postId;
+            }
+        }
     </script>
 
     <style>
@@ -201,6 +222,35 @@
             font-size: 12px;   /* 縮小字體大小 */
             cursor: pointer;
         }
+
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 2000; 
+            left: 0; top: 0; 
+            width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background: var(--bg-color);
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            width: 50%;
+        }
     </style>
+
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span onclick="closeModal('historyModal')" style="float:right; cursor:pointer;">&times;</span>
+            <h3>編輯紀錄</h3>
+            <div id="historyContent"></div>
+        </div>
+    </div>
+
+    <span onclick="openHistoryModal('{{ post.edit_history | replace("'", "\\'") }}')" 
+        style="cursor:pointer; color:gray; font-size: 0.8em; text-decoration: underline;">
+        [查看紀錄]
+    </span>
 </body>
 </html>
