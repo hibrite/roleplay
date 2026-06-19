@@ -32,8 +32,17 @@ def close_db(e):
     if db is not None:
         db.close()
 
-with app.app_context():
-    init_db()
+#with app.app_context():
+#    init_db()
+
+def get_db():
+    if 'db' not in g:
+        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=DictCursor)
+        # 在這裡建立表格，確保連線成功後才執行
+        with g.db.cursor() as cur:
+            cur.execute('CREATE TABLE IF NOT EXISTS users (...)') 
+        g.db.commit()
+    return g.db
 
 @app.route('/')
 def index():
@@ -136,3 +145,11 @@ def create_post():
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+def get_db():
+    if 'db' not in g:
+        # 增加這行檢查
+        if not DATABASE_URL:
+            print("嚴重錯誤：未偵測到 DATABASE_URL！")
+        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=DictCursor)
+    return g.db
