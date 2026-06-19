@@ -1,7 +1,7 @@
 import os
 import psycopg2
 from psycopg2.extras import DictCursor
-from flask import Flask, render_template, request, redirect, url_for, session, g
+from flask import Flask, render_template, request, redirect, url_for, session, g, flash
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -22,31 +22,25 @@ def close_db(e):
 def index():
     db = get_db()
     with db.cursor() as cur:
-        # 1. 獲取文章
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
-        
-        # 2. 獲取所有使用者列表 (確保這裡撈取的是 username 欄位)
         cur.execute('SELECT username FROM users')
-        # 將結果轉換為單純的清單 ['user1', 'user2']，方便前端迴圈
         user_list = [row['username'] for row in cur.fetchall()]
-        
-    return render_template(
-        'index.html', 
-        posts=posts, 
-        user_list=user_list,  # 確保傳遞這個變數
-        current_user=session.get('current_user')
-    )
+    return render_template('index.html', posts=posts, user_list=user_list, current_user=session.get('current_user'))
 
 @app.route('/register', methods=['POST'])
 def register():
     username = request.form.get('username').strip()
-    if username:
-        db = get_db()
-        with db.cursor() as cur:
-            cur.execute('INSERT INTO users (username) VALUES (%s) ON CONFLICT DO NOTHING', (username,))
+    if not username: return redirect(url_for('index'))
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('SELECT username FROM users WHERE username = %s', (username,))
+        if cur.fetchone():
+            flash('此帳號已存在，請更換名稱！', 'error')
+        else:
+            cur.execute('INSERT INTO users (username) VALUES (%s)', (username,))
             db.commit()
-        session['current_user'] = username
+            session['current_user'] = username
     return redirect(url_for('index'))
 
 @app.route('/login', methods=['POST'])
@@ -54,14 +48,22 @@ def login():
     username = request.form.get('username').strip()
     db = get_db()
     with db.cursor() as cur:
-        cur.execute('SELECT * FROM users WHERE username = %s', (username,))
+        cur.execute('SELECT username FROM users WHERE username = %s', (username,))
         if cur.fetchone():
             session['current_user'] = username
+        else:
+            flash('找不到此帳號，請先註冊。', 'error')
     return redirect(url_for('index'))
 
 @app.route('/switch_user/<username>')
 def switch_user(username):
     session['current_user'] = username
+    return redirect(url_for('index'))
+
+@app.route('/logout/<username>')
+def logout_user(username):
+    if session.get('current_user') == username:
+        session.pop('current_user', None)
     return redirect(url_for('index'))
 
 @app.route('/create_post', methods=['POST'])
@@ -70,14 +72,8 @@ def create_post():
     title, content = request.form.get('title'), request.form.get('content')
     db = get_db()
     with db.cursor() as cur:
-        cur.execute('INSERT INTO posts (username, title, content) VALUES (%s, %s, %s)', 
-                    (session['current_user'], title, content))
+        cur.execute('INSERT INTO posts (username, title, content) VALUES (%s, %s, %s)', (session['current_user'], title, content))
         db.commit()
-    return redirect(url_for('index'))
-
-@app.route('/logout/<username>')
-def logout_user(username):
-    if session.get('current_user') == username: session.pop('current_user', None)
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
