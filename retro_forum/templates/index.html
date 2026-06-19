@@ -52,7 +52,7 @@
         <h1>=== Midnight Signal Forum ===</h1>
         {% if current_user %}
             <div class="post">
-                <h3>發表新主題 (目前: {{ current_user }})</h3>
+                <h3>發表新主題 (使用者: {{ current_user }})</h3>
                 <form action="/create_post" method="POST">
                     <input type="text" name="title" placeholder="標題..." required>
                     <textarea name="content" rows="4" placeholder="內容..." required></textarea>
@@ -72,10 +72,18 @@
                                 style="cursor:pointer; color:gray; font-size: 0.6em; text-decoration: underline;">[已編輯]</span>
                         {% endif %}
                     </h3>
-                    <small>By: {{ post.username }}</small>
+
+                    <small>By: 
+                        {% if '_deleted_' in post.username %}
+                            <span style="color: #999;">(已註銷帳號)</span>
+                        {% else %}
+                            {{ post.username }}
+                        {% endif %}
+                    </small>
+
                     <p>{{ post.content }}</p>
 
-                    {% if post.username == current_user %}
+                    {% if post.username == current_user and '_deleted_' not in post.username %}
                         <button onclick="location.href='/delete_post/{{ post.id }}'">刪除</button>
                         <button onclick="openEditPostModal('{{ post.id }}', '{{ post.title | replace("'", "\\'") }}', '{{ post.content | replace("'", "\\'") }}')">編輯</button>
                     {% endif %}
