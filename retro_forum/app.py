@@ -22,16 +22,11 @@ def close_db(e):
 def index():
     db = get_db()
     with db.cursor() as cur:
-        # 使用 LEFT JOIN 判斷發文者是否還在 users 表中
-        cur.execute('''
-            SELECT p.*, u.username as valid_user 
-            FROM posts p 
-            LEFT JOIN users u ON p.username = u.username 
-            ORDER BY p.timestamp DESC
-        ''')
+        cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
         
-        cur.execute('SELECT username FROM users')
+        # 關鍵：只抓取狀態為 active 的用戶
+        cur.execute('SELECT username FROM users WHERE status = %s', ('active',))
         user_list = [row['username'] for row in cur.fetchall()]
         
     return render_template('index.html', posts=posts, user_list=user_list, current_user=session.get('current_user'))
@@ -58,9 +53,12 @@ def login():
     with db.cursor() as cur:
         cur.execute('SELECT username FROM users WHERE username = %s', (username,))
         if cur.fetchone():
+            # 重新設為 active，這樣側欄就會出現
+            cur.execute('UPDATE users SET status = %s WHERE username = %s', ('active', username))
+            db.commit()
             session['current_user'] = username
         else:
-            flash('找不到此帳號，請先註冊。', 'error')
+            flash('查無此帳號！', 'error')
     return redirect(url_for('index'))
 
 @app.route('/switch_user/<username>')
@@ -82,8 +80,14 @@ def delete_user(username):
 
 @app.route('/logout/<username>')
 def logout_user(username):
-    if session.get('current_user') == username:
-        session.pop('current_user', None)
+    db = get_db()
+    with db.cursor() as cur:
+        # 將狀態改為隱藏
+        cur.execute('UPDATE users SET status = %s WHERE username = %s', ('hidden', username))
+        db.commit()
+        # 如果是目前登入者，清除 session
+        if session.get('current_user') == username:
+            session.pop('current_user', None)
     return redirect(url_for('index'))
 
 @app.route('/create_post', methods=['POST'])
