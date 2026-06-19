@@ -128,12 +128,26 @@ def switch_user(username):
 def delete_user(username):
     db = get_db()
     with db.cursor() as cur:
-        # 將帳號設為 deleted，並把名稱加上 timestamp 以釋放原名稱
-        new_name = f"{username}_deleted_{int(datetime.now().timestamp())}"
-        cur.execute('UPDATE users SET username = %s, status = %s WHERE username = %s', (new_name, 'deleted', username))
-        db.commit()
+        # 1. 檢查該帳號目前是否已經被標記為 deleted
+        # 我們假設如果 status 是 'deleted'，就不需要再做字串處理
+        cur.execute('SELECT status FROM users WHERE username = %s', (username,))
+        result = cur.fetchone()
+        
+        if result and result['status'] != 'deleted':
+            # 只有當帳號是 'active' 或其他狀態時，才執行「改名與註銷」
+            new_name = f"{username}_deleted_{int(datetime.now().timestamp())}"
+            cur.execute('UPDATE users SET username = %s, status = %s WHERE username = %s', 
+                        (new_name, 'deleted', username))
+            
+            # 同步更新該用戶發過的貼文名稱 (這能確保貼文作者顯示一致)
+            cur.execute('UPDATE posts SET username = %s WHERE username = %s', 
+                        (new_name, username))
+            db.commit()
+        
+        # 2. 如果該帳號剛好是目前登入的，執行強制登出
         if session.get('current_user') == username:
             session.pop('current_user', None)
+            
     return redirect(url_for('index'))
 
 @app.route('/logout/<username>')
