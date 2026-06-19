@@ -4,10 +4,11 @@ from psycopg2.extras import DictCursor
 from flask import Flask, render_template, request, redirect, url_for, session, g
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+# 使用固定或安全的金鑰，避免雲端重啟時 Session 遺失
+app.secret_key = os.environ.get('SECRET_KEY', 'retro-secret-key-1999')
 
 # ==========================================================
-# 資料庫連線網址（已清除縮排雜質，保證為完整的一行）
+# 妳從 Supabase 直接複製下來的完美網址（完全不用動它）
 # ==========================================================
 DATABASE_URL = "postgresql://postgres:retroforum2026@db.jupusfomxhlxpyxmgega.supabase.co:5432/postgres"
 
@@ -23,47 +24,45 @@ def close_db(e):
         db.close()
 
 def init_db():
-    with app.app_context():
-        db = get_db()
-        with db.cursor() as cur:
-            # 建立使用者資料表
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    username TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL
-                )
-            ''')
-            # 建立文章資料表
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS posts (
-                    id SERIAL PRIMARY KEY,
-                    username TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    room TEXT NOT NULL,
-                    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            # 建立留言資料表
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS comments (
-                    id SERIAL PRIMARY KEY,
-                    post_id INTEGER NOT NULL,
-                    username TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            db.commit()
-
-# 強制在每次啟動伺服器時，檢查並建立雲端資料表
-with app.app_context():
-    init_db()
+    db = get_db()
+    with db.cursor() as cur:
+        # 建立使用者資料表
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
+            )
+        ''')
+        # 建立文章資料表
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS posts (
+                id SERIAL PRIMARY KEY,
+                username TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                room TEXT NOT NULL,
+                timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # 建立留言資料表
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS comments (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                content TEXT NOT NULL,
+                timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        db.commit()
 
 @app.route('/')
 def index():
     db = get_db()
+    # 每次首頁載入時順便檢查/建立資料表（這樣最安全，不會在啟動時猝死）
+    init_db()
+    
     with db.cursor() as cur:
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
@@ -146,4 +145,6 @@ def comment(post_id):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # 這行可以自動適應 Render 的雲端 Port 設定，本地、雲端都能跑
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
