@@ -37,12 +37,20 @@ with app.app_context():
 @app.route('/')
 def index():
     db = get_db()
+    device_id = session.sid  # 獲取當前裝置的唯一 ID
+    
     with db.cursor() as cur:
+        # 抓取所有貼文
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
         
-        # 關鍵：只抓取狀態為 active 的用戶
-        cur.execute('SELECT username FROM users WHERE status = %s', ('active',))
+        # 關鍵修改：只抓取「狀態為 active」且「綁定在當前裝置」的用戶
+        # 這樣一來，只有在當前裝置登入的帳號才會出現在清單中
+        cur.execute('''
+            SELECT username FROM users 
+            WHERE status = %s AND current_device_id = %s
+        ''', ('active', device_id))
+        
         user_list = [row['username'] for row in cur.fetchall()]
         
     return render_template('index.html', posts=posts, user_list=user_list, current_user=session.get('current_user'))
