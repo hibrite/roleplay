@@ -2,84 +2,95 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Forum - 老式論壇</title>
-    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
+    <title>RETRO_BBS_FORUM // 老式論壇</title>
     <style>
+        /* CSS 變數：用於日夜模式切換 */
         :root {
+            --bg-color: #000000;
+            --text-color: #a1a1a1;
+            --border-color: #a1a1a1;
+        }
+        .day-mode {
             --bg-color: #ffffff;
             --text-color: #000000;
+            --border-color: #000000;
         }
-        .dark-mode {
-            --bg-color: #000000;
-            --text-color: #aaaaaa; /* 夜間為灰字 */
-        }
+
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Courier Prime', monospace;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
             padding: 20px;
+            display: flex;
+            height: 100vh;
+            box-sizing: border-box;
             transition: all 0.3s ease;
         }
-        /* 模仿老式螢幕的框線風格 */
-        .container { border: 2px solid var(--text-color); padding: 20px; max-width: 800px; margin: auto; }
-        input, textarea, button { font-family: 'Courier Prime', monospace; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--text-color); }
-        a { color: var(--text-color); }
-        #sidebar { border-right: 1px dashed var(--text-color); width: 200px; float: left; }
+
+        #sidebar { width: 250px; border-right: 2px dashed var(--border-color); padding-right: 20px; display: flex; flex-direction: column; }
+        #main-content { flex: 1; padding-left: 20px; overflow-y: auto; }
+
+        h1, h2, h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; text-transform: uppercase; }
+        input, textarea { background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); font-family: inherit; padding: 5px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+        button { background-color: var(--border-color); color: var(--bg-color); border: none; font-family: inherit; padding: 5px 10px; cursor: pointer; font-weight: bold; }
+        
+        .user-item { display: flex; justify-content: space-between; padding: 5px; border: 1px solid transparent; }
+        .user-item.active { border: 1px solid var(--border-color); }
+        .user-item a { color: var(--text-color); text-decoration: none; }
+        .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <button onclick="toggleTheme()">切換日/夜模式</button>
-    
     <div id="sidebar">
-        <h3>帳號管理</h3>
+        <button onclick="document.body.classList.toggle('day-mode')">切換 明/暗 風格</button>
+        <h2>[ ACCOUNTS ]</h2>
+        
         <form action="/login" method="POST">
-            <input type="text" name="username" placeholder="登入..." required>
+            <input type="text" name="username" placeholder="登入帳號..." required>
             <button type="submit">登入</button>
         </form>
-        <br>
+        <hr style="width:100%">
         <form action="/register" method="POST">
-            <input type="text" name="username" placeholder="註冊..." required>
+            <input type="text" name="username" placeholder="註冊新帳號..." required>
             <button type="submit">註冊</button>
         </form>
 
-        <h3>線上用戶</h3>
-        {% for user in users %}
-        <div>
-            > {{ user.username }} 
-            <a href="/switch_user/{{ user.username }}">[切換]</a>
-        </div>
+        <h3>切換清單:</h3>
+        {% for user in user_list %}
+            <div class="user-item {% if user == current_user %}active{% endif %}">
+                <a href="/switch_user/{{ user }}">{{ user }}</a>
+                <a href="/logout/{{ user }}" style="color:red">[X]</a>
+            </div>
         {% endfor %}
     </div>
 
-    <div style="margin-left: 220px;">
+    <div id="main-content">
+        <h1>=== RETRO ELECTRONIC BULLETIN BOARD ===</h1>
+
         {% if current_user %}
-        <h3>發表新主題 (User: {{ current_user }})</h3>
-        <form action="/create_post" method="POST">
-            <input type="text" name="title" placeholder="標題" required><br>
-            <textarea name="content" rows="3" placeholder="內容..." required></textarea><br>
-            <button type="submit">發布文章</button>
-        </form>
+            <div class="post">
+                <h3>發表新主題 (使用者: {{ current_user }})</h3>
+                <form action="/create_post" method="POST">
+                    <input type="text" name="title" placeholder="標題..." required>
+                    <textarea name="content" rows="4" placeholder="內容..." required></textarea>
+                    <button type="submit">發布文章</button>
+                </form>
+            </div>
         {% else %}
-        <p>請先登入或註冊。</p>
+            <p style="color: red;">* 請先登入或註冊以進行發文。</p>
         {% endif %}
 
-        <hr>
+        <h2>[ 佈告欄 ]</h2>
         {% for post in posts %}
-        <div style="margin-bottom: 20px;">
-            <h4>[ {{ post.title }} ] by {{ post.username }}</h4>
-            <p>{{ post.content }}</p>
-        </div>
+            <div class="post">
+                <h3>{{ post.title }}</h3>
+                <small>By: {{ post.username }}</small>
+                <p>{{ post.content }}</p>
+            </div>
         {% endfor %}
     </div>
-</div>
-
-<script>
-    function toggleTheme() {
-        document.body.classList.toggle('dark-mode');
-    }
-</script>
 
 </body>
 </html>
