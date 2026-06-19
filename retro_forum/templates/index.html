@@ -30,19 +30,17 @@
             <button type="submit">註冊</button>
         </form>
         <h3>用戶清單:</h3>
-        <div id="user-list-container" style="display: flex; flex-direction: column; gap: 10px;">
+        <div id="user-list-container">
             {% for user in user_list %}
                 <div class="user-item {% if user.username == current_user %}active{% endif %}" 
-                    style="border: 1px solid var(--border-color); padding: 10px; border-radius: 5px; background: rgba(255,255,255,0.05);">
+                    style="border: 1px solid var(--border-color); padding: 10px; border-radius: 5px;">
                     
-                    <div style="font-weight: bold; margin-bottom: 5px;">
-                        <a href="/switch_user/{{ user.username }}" style="color:var(--text-color); text-decoration: none;">> {{ user.username }}</a>
-                    </div>
+                    <a href="/switch_user/{{ user.username }}" style="color:var(--text-color); text-decoration: none;">> {{ user.username }}</a>
                     
-                    <div style="border-top: 1px solid var(--border-color); padding-top: 5px; font-size: 0.8em; display: flex; gap: 5px;">
-                        <button onclick="location.href='/logout/{{ user.username }}'" style="cursor: pointer;">[登出]</button>
-                        <button onclick="confirmDelete('{{ user.username }}')" style="cursor: pointer; color: #ff6b6b;">[註銷]</button>
-                        <button onclick="openEditModal('{{ user.username }}', '{{ user.bio | replace("'", "\\'") }}')" style="cursor: pointer;">[編輯]</button>
+                    <div style="font-size: 0.8em; margin-top: 5px;">
+                        <button onclick="location.href='/logout/{{ user.username }}'">[登出]</button>
+                        <button onclick="confirmDelete('{{ user.username }}')" style="color: #ff6b6b;">[註銷]</button>
+                        <button onclick="openEditModal('{{ user.username }}', '{{ user.bio | replace("'", "\\'") }}')">[編輯]</button>
                     </div>
                 </div>
             {% endfor %}
@@ -78,6 +76,7 @@
 
                     {% if post.username == current_user %}
                         <button onclick="location.href='/delete_post/{{ post.id }}'">刪除</button>
+                        <button onclick="openEditPostModal('{{ post.id }}', '{{ post.title | replace("'", "\\'") }}', '{{ post.content | replace("'", "\\'") }}')">編輯</button>
                     {% endif %}
                 {% endif %}
             </div>
@@ -104,56 +103,76 @@
         </form>
     </div>
 
+    <div id="editPostModal" style="display:none; position:fixed; top:20%; left:30%; width:40%; background: var(--bg-color); color: var(--text-color); padding:20px; border:2px solid var(--border-color); z-index:1000;">
+        <form id="editPostForm" method="POST">
+            <h3>編輯貼文</h3>
+            <p>標題:</p>
+            <input type="text" name="title" id="edit_post_title" required>
+            <p>內容:</p>
+            <textarea name="content" id="edit_post_content" rows="4" style="width:100%;"></textarea>
+            <br><br>
+            <button type="submit">確認修改</button>
+            <button type="button" onclick="document.getElementById('editPostModal').style.display='none'">取消</button>
+        </form>
+    </div>
+
     <script>
-    function openEditModal(username, bio) {
-        const modal = document.getElementById('editModal');
-        modal.style.display = 'block';
-        
-        // 設定表單 action
-        document.getElementById('editForm').action = '/update_profile/' + username;
-        
-        // 填入名稱
-        document.getElementById('new_username').value = username;
-        
-        // 填入 bio，如果 bio 是空的就顯示「沒有內容」
-        const bioTextarea = document.getElementById('bio');
-        bioTextarea.value = (bio && bio.trim() !== "") ? bio : "沒有內容";
-    }
-
-    function confirmDelete(username) {
-        if (confirm('確定要註銷帳號 "' + username + '" 嗎？')) {
-            location.href = '/delete_user/' + username;
+        function openEditModal(username, bio) {
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('editForm').action = '/update_profile/' + username;
+            document.getElementById('new_username').value = username;
+            document.getElementById('bio').value = (bio && bio.trim() !== "") ? bio : "";
         }
-    }
-    /* 這裡定義一個共用的選定狀態顏色 */
-    .user-item.active {
-        /* 在深色模式下會顯得比周圍淺 (rgba白色疊加) */
-        /* 在淺色模式下，因為切換了 .day-mode，這裡會變為深灰色 */
-        background-color: var(--active-bg) !important;
-        border: 1px solid var(--text-color) !important;
-    }
 
-    :root { 
-        --bg-color: #000000; --text-color: #a1a1a1; --border-color: #a1a1a1; 
-        --active-bg: rgba(255, 255, 255, 0.15); /* 深色模式下的選定背景 */
-    }
-    .day-mode { 
-        --bg-color: #ffffff; --text-color: #000000; --border-color: #000000; 
-        --active-bg: rgba(0, 0, 0, 0.15); /* 淺色模式下的選定背景 */
-    }
-
-    function showEditHistory(historyJson) {
-        try {
-            const history = JSON.parse(historyJson);
-            let msg = "編輯紀錄：\n";
-            history.forEach((h, i) => {
-                msg += (i + 1) + ". " + h.content + " (" + h.timestamp + ")\n";
-            });
-            alert(msg);
-        } catch (e) {
-            alert("無編輯紀錄");
+        // 新增：編輯貼文彈出視窗功能
+        function openEditPostModal(postId, title, content) {
+            document.getElementById('editPostModal').style.display = 'block';
+            document.getElementById('editPostForm').action = '/edit_post/' + postId;
+            document.getElementById('edit_post_title').value = title;
+            document.getElementById('edit_post_content').value = content;
         }
-    }
+
+        function confirmDelete(username) {
+            if (confirm('確定要註銷帳號 "' + username + '" 嗎？')) {
+                location.href = '/delete_user/' + username;
+            }
+        }
+
+        function showEditHistory(historyJson) {
+            try {
+                const history = JSON.parse(historyJson);
+                let msg = "編輯紀錄：\n";
+                history.forEach((h, i) => {
+                    msg += (i + 1) + ". " + h.content + " (時間: " + h.timestamp + ")\n";
+                });
+                alert(msg);
+            } catch (e) {
+                alert("無編輯紀錄");
+            }
+        }
     </script>
+    
+    <style>
+        :root { 
+            --bg-color: #000000; --text-color: #a1a1a1; --border-color: #a1a1a1; 
+            --active-bg: rgba(255, 255, 255, 0.15); 
+        }
+        .day-mode { 
+            --bg-color: #ffffff; --text-color: #000000; --border-color: #000000; 
+            --active-bg: rgba(0, 0, 0, 0.15); 
+        }
+        
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', monospace; margin: 0; padding: 20px; display: flex; height: 100vh; transition: all 0.3s; }
+        
+        /* 修正後的選定狀態樣式 */
+        .user-item.active {
+            background-color: var(--active-bg) !important;
+            border: 1px solid var(--text-color) !important;
+        }
+        
+        #sidebar { width: 250px; border-right: 2px dashed var(--border-color); padding-right: 20px; display: flex; flex-direction: column; }
+        #main-content { flex: 1; padding-left: 20px; overflow-y: auto; }
+        .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; }
+    </style>
 </body>
 </html>
