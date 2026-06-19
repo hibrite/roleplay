@@ -32,15 +32,17 @@
         <h3>用戶清單:</h3>
         <div id="user-list-container" style="display: flex; flex-direction: column; gap: 10px;">
             {% for user in user_list %}
-                <div class="user-item {% if user == current_user %}active{% endif %}" 
+                <div class="user-item {% if user.username == current_user %}active{% endif %}" 
                     style="border: 1px solid var(--border-color); padding: 10px; border-radius: 5px; background: rgba(255,255,255,0.05);">
+                    
                     <div style="font-weight: bold; margin-bottom: 5px;">
-                        <a href="/switch_user/{{ user }}" style="color:var(--text-color); text-decoration: none;">> {{ user }}</a>
+                        <a href="/switch_user/{{ user.username }}" style="color:var(--text-color); text-decoration: none;">> {{ user.username }}</a>
                     </div>
+                    
                     <div style="border-top: 1px solid var(--border-color); padding-top: 5px; font-size: 0.8em; display: flex; gap: 5px;">
-                        <button onclick="location.href='/logout/{{ user }}'" style="cursor: pointer;">[登出]</button>
-                        <button onclick="confirmDelete('{{ user }}')" style="cursor: pointer; color: #ff6b6b;">[註銷]</button>
-                        <button onclick="openEditModal('{{ user }}')" style="cursor: pointer;">[編輯]</button>
+                        <button onclick="location.href='/logout/{{ user.username }}'" style="cursor: pointer;">[登出]</button>
+                        <button onclick="confirmDelete('{{ user.username }}')" style="cursor: pointer; color: #ff6b6b;">[註銷]</button>
+                        <button onclick="openEditModal('{{ user.username }}', '{{ user.bio | replace("'", "\\'") }}')" style="cursor: pointer;">[編輯]</button>
                     </div>
                 </div>
             {% endfor %}
@@ -74,7 +76,7 @@
         
         <form id="editForm" method="POST">
             <h3 style="color: var(--text-color);">編輯個人檔案</h3>
-            <p>新名稱:</p>
+            <p>名稱:</p>
             <input type="text" name="new_username" id="new_username" required 
                 style="background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color);">
             
@@ -89,17 +91,23 @@
     </div>
 
     <script>
-    // 開啟編輯視窗
-    function openEditModal(username) {
+    function openEditModal(username, bio) {
         const modal = document.getElementById('editModal');
         modal.style.display = 'block';
+        
+        // 設定表單 action
         document.getElementById('editForm').action = '/update_profile/' + username;
+        
+        // 填入名稱
         document.getElementById('new_username').value = username;
+        
+        // 填入 bio，如果 bio 是空的就顯示「沒有內容」
+        const bioTextarea = document.getElementById('bio');
+        bioTextarea.value = (bio && bio.trim() !== "") ? bio : "沒有內容";
     }
 
-    // 加入確認刪除的提示，避免誤觸
     function confirmDelete(username) {
-        if (confirm('確定要註銷帳號 "' + username + '" 嗎？這將無法復原。')) {
+        if (confirm('確定要註銷帳號 "' + username + '" 嗎？')) {
             location.href = '/delete_user/' + username;
         }
     }
