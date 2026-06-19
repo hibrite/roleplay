@@ -32,8 +32,12 @@
         <h3>用戶清單:</h3>
         {% for user in user_list %}
             <div class="user-item {% if user == current_user %}active{% endif %}">
-                <a href="/switch_user/{{ user }}" style="color:var(--text-color)">{{ user }}</a>
-                <a href="/logout/{{ user }}" style="color:red">[X]</a>
+                <a href="/switch_user/{{ user }}">{{ user }}</a>
+                <br>
+                <small>
+                    <a href="/logout/{{ user }}">登出</a> | 
+                    <a href="/delete_user/{{ user }}" style="color:red">註銷</a>
+                </small>
             </div>
         {% endfor %}
     </div>
@@ -52,7 +56,13 @@
         {% for post in posts %}
             <div class="post">
                 <h3>{{ post.title }}</h3>
-                <small>By: {{ post.username }}</small>
+                <small>By: 
+                    {% if post.valid_user %}
+                        {{ post.username }}
+                    {% else %}
+                        {{ post.username }} (已註銷)
+                    {% endif %}
+                </small>
                 <p>{{ post.content }}</p>
             </div>
         {% endfor %}
