@@ -75,7 +75,13 @@
                         {% endif %}
                     </h3>
 
-                    <small>By: {{ post.username }}</small>
+                    <small>By: 
+                        <span onclick="openProfileModal('{{ post.username }}')" 
+                            style="cursor:pointer; color: #4a90e2; text-decoration: underline;">
+                            {{ post.username }}
+                        </span>
+                    </small>
+                    
                     <p>{{ post.content }}</p>
 
                     {% if post.username == current_user and '_deleted_' not in post.username %}
@@ -180,6 +186,37 @@
                 location.href = '/delete_post/' + postId;
             }
         }
+
+        // 將 Python 的 user_list 轉為 JS 物件
+        const userMap = {
+            {% for user in user_list %}
+            "{{ user.username }}": "{{ user.bio | replace('"', '\\"') | replace('\n', '<br>') }}",
+            {% endfor %}
+        };
+
+        function openProfileModal(username) {
+            const bio = userMap[username] || "這位用戶很神祕，什麼都沒寫。";
+            document.getElementById('profileName').innerText = "@" + username;
+            document.getElementById('profileBio').innerHTML = bio;
+            document.getElementById('profileModal').style.display = 'block';
+        }
+
+        // 在頁面載入時，將貼文內容中的 @ 轉換為點擊事件
+        document.addEventListener('DOMContentLoaded', () => {
+            const posts = document.querySelectorAll('.post p');
+            posts.forEach(p => {
+                let content = p.innerHTML;
+                // 使用 Regex 尋找 @ 後接的文字 (數字、字母、底線)
+                content = content.replace(/@(\w+)/g, (match, username) => {
+                    if (userMap.hasOwnProperty(username)) {
+                        return `<span onclick="openProfileModal('${username}')" style="cursor:pointer; color: #4a90e2; text-decoration: underline;">${match}</span>`;
+                    }
+                    return match; // 若用戶不存在則維持原樣
+                });
+                p.innerHTML = content;
+            });
+        });
+
     </script>
 
     <style>
@@ -249,5 +286,14 @@
     </div>
 
     </span>
+
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <span onclick="closeModal('profileModal')" style="float:right; cursor:pointer;">&times;</span>
+            <h3 id="profileName">用戶名稱</h3>
+            <p id="profileBio">個人簡介內容...</p>
+        </div>
+    </div>
+
 </body>
 </html>
