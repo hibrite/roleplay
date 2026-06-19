@@ -18,14 +18,41 @@ def close_db(e):
     if db is not None:
         db.close()
 
+@app.route('/delete_user/<username>')
+def delete_user(username):
+    db = get_db()
+    with db.cursor() as cur:
+        # 刪除該使用者
+        cur.execute('DELETE FROM users WHERE username = %s', (username,))
+        db.commit()
+        # 如果剛好是目前登入的使用者，執行登出
+        if session.get('current_user') == username:
+            session.pop('current_user', None)
+    return redirect(url_for('index'))
+
+@app.route('/logout/<username>')
+def logout_user(username):
+    if session.get('current_user') == username:
+        session.pop('current_user', None)
+    return redirect(url_for('index'))
+
+
 @app.route('/')
 def index():
     db = get_db()
     with db.cursor() as cur:
-        cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
+        # 使用 LEFT JOIN 判斷發文者是否還在 users 表中
+        cur.execute('''
+            SELECT p.*, u.username as valid_user 
+            FROM posts p 
+            LEFT JOIN users u ON p.username = u.username 
+            ORDER BY p.timestamp DESC
+        ''')
         posts = cur.fetchall()
+        
         cur.execute('SELECT username FROM users')
         user_list = [row['username'] for row in cur.fetchall()]
+        
     return render_template('index.html', posts=posts, user_list=user_list, current_user=session.get('current_user'))
 
 @app.route('/register', methods=['POST'])
