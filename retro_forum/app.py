@@ -47,21 +47,25 @@ def get_db():
 @app.route('/')
 def index():
     db = get_db()
-    # 結合 IP 與 User-Agent 作為唯一設備識別碼
     device_id = request.remote_addr + request.headers.get('User-Agent', '')
     
     with db.cursor() as cur:
         cur.execute('SELECT * FROM posts ORDER BY timestamp DESC')
         posts = cur.fetchall()
         
-        # 關鍵：只查詢「綁定在當前設備」且「狀態為 active」的帳號
+        # 修改這裡：同時選取 username 和 bio
         cur.execute('''
-            SELECT username FROM users 
+            SELECT username, bio FROM users 
             WHERE status = %s AND current_device_id = %s
         ''', ('active', device_id))
-        user_list = [row['username'] for row in cur.fetchall()]
         
-    return render_template('index.html', posts=posts, user_list=user_list, current_user=session.get('current_user'))
+        # 將結果存為物件陣列，沒有內容時回傳空字串
+        user_list = [
+            {'username': row['username'], 'bio': row['bio'] if row['bio'] else ''} 
+            for row in cur.fetchall()
+        ]
+        
+    return render_template('index.html', user_list=user_list, posts=posts, current_user=session.get('current_user'))
 
 @app.route('/register', methods=['POST'])
 def register():
