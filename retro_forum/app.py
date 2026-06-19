@@ -13,7 +13,7 @@ app.wsgi_app = WhiteNoise(app.wsgi_app, root="static/")
 # ==========================================================
 # 這是妳從 Supabase 直接複製下來的網址（完全正確，不用動它）
 # ==========================================================
-DATABASE_URL = "postgresql://postgres:c!XC94s56MHMZB%23@db.jupusfomxhlxpyxmgega.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://postgres.jupusfomxhlxpyxmgega:retroforum2026@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
 
 def get_db():
     if 'db' not in g:
