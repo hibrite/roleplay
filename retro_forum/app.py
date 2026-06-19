@@ -31,6 +31,9 @@ def close_db(e):
     if db is not None:
         db.close()
 
+with app.app_context():
+    init_db()
+
 @app.route('/')
 def index():
     db = get_db()
