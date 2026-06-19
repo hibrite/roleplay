@@ -143,6 +143,25 @@ def create_post():
         db.commit()
     return redirect(url_for('index'))
 
+# 處理編輯個人檔案的資料更新
+@app.route('/update_profile/<old_username>', methods=['POST'])
+def update_profile(old_username):
+    new_username = request.form.get('new_username').strip()
+    bio = request.form.get('bio').strip()
+    
+    db = get_db()
+    with db.cursor() as cur:
+        # 更新使用者資料
+        cur.execute('UPDATE users SET username = %s, bio = %s WHERE username = %s', 
+                    (new_username, bio, old_username))
+        db.commit()
+        
+        # 如果正在登入中，同步更新 session
+        if session.get('current_user') == old_username:
+            session['current_user'] = new_username
+            
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
