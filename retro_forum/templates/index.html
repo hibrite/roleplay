@@ -75,9 +75,8 @@
                         {% endif %}
                     </h3>
 
-                    <small>By: 
-                        <span onclick="openProfileModal('{{ post.username }}')" 
-                            style="cursor:pointer; color: #4a90e2; text-decoration: underline;">
+                    <small>發文者: 
+                        <span class="mention" onclick="openProfileModal('{{ post.username }}')">
                             {{ post.username }}
                         </span>
                     </small>
