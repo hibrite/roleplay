@@ -64,7 +64,7 @@ def get_device_id():
 def index():
     # 確保每個訪問的人都有 device_id
     device_id = get_device_id()
-    
+
     db = get_db()
     with db.cursor() as cur:
         # 正確的寫法：只需要一次 SELECT
@@ -77,7 +77,7 @@ def index():
         
     # 設定 Response
     resp = make_response(render_template('index.html', user_list=user_list, posts=posts, current_user=session.get('current_user')))
-    resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10)
+    resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10, httponly=True)
     return resp
 
 @app.route('/register', methods=['POST'])
@@ -101,7 +101,11 @@ def register():
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username', '').strip()
-    device_id = get_device_id() # 使用從 Cookie 讀到的 ID
+    device_id = request.cookies.get('device_id')
+
+    if not device_id:
+        flash('無法識別您的裝置，請確認瀏覽器已啟用 Cookie。', 'error')
+        return redirect(url_for('index'))
     
     db = get_db()
     with db.cursor() as cur:
