@@ -47,27 +47,6 @@
             {% endfor %}
         </div>
     </div>
-
-    <div id="hot-posts">
-        <h2>【熱門貼文 TOP 5】</h2>
-        {% for post in hot_posts %}
-        <div class="post">
-            <p>① #{{ post.id }} 〈{{ post.title }}〉</p>
-            <p>發佈者：{{ post.username }} | 回覆：0 | ♡ {{ post.likes }}</p>
-            <p>[{{ post.board }}]</p>
-            <a href="{{ url_for('like_post', post_id=post.id) }}">按讚</a>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div id="boards">
-        <h2>【板塊列表】</h2>
-        <ul>
-            <li>一般討論</li>
-            <li>職場討論</li>
-            <li>遊戲討論</li>
-        </ul>
-    </div>
     
     <div id="main-content">
         <h1>=== Midnight Signal Forum ===</h1>
@@ -81,6 +60,17 @@
                 </form>
             </div>
         {% endif %}
+        <div id="hot-posts">
+            <h2>【熱門貼文 TOP 5】</h2>
+            {% for post in hot_posts %}
+            <div class="post">
+                <p>① #{{ post.id }} 〈{{ post.title }}〉</p>
+                <p>發佈者：{{ post.username }} | 回覆：0 | ♡ {{ post.likes }}</p>
+                <p>[{{ post.board }}]</p>
+                <a href="{{ url_for('like_post', post_id=post.id) }}">按讚</a>
+            </div>
+            {% endfor %}
+        </div>
         {% for post in posts %}
             <div class="post">
                 {% if post.status == 'deleted' %}
@@ -146,7 +136,23 @@
         </form>
     </div>
 
+    <div id="right-sidebar">
+        <h3>板塊列表</h3>
+        <ul>
+            {% for board in boards %}
+                <li><a href="/board/{{ board }}">{{ board }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+
     <script>
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
+
         function openEditModal(username, bio) {
             document.getElementById('editModal').style.display = 'block';
             document.getElementById('editForm').action = '/update_profile/' + username;
@@ -259,15 +265,16 @@
         --mention-color: #7c7c7c; 
     }
 
-    body { 
-        background-color: var(--bg-color); 
-        color: var(--text-color); 
-        font-family: 'Courier New', monospace; 
-        margin: 0; 
-        padding: 20px; 
-        display: flex; 
-        height: 100vh; 
-        transition: all 0.3s; 
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: 'Courier New', monospace;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center; /* 讓整體內容往中間靠 */
+        gap: 30px;
+        min-height: 100vh;
     }
 
     /* 提及樣式 */
@@ -292,8 +299,30 @@
     }
 
     #sidebar { width: 250px; border-right: 2px dashed var(--border-color); padding-right: 20px; display: flex; flex-direction: column; }
-    #main-content { flex: 1; padding-left: 20px; overflow-y: auto; }
-    .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; }
+    #main-content { 
+        flex: 1; 
+        padding-left: 20px; 
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+    }
+
+    .post { 
+        border: 1px solid var(--border-color); 
+        padding: 15px; 
+        margin-bottom: 20px;
+        width: 100%;       /* 填滿父容器 */
+        max-width: 600px;
+        box-sizing: border-box;
+    }
+
+    #right-sidebar {
+        width: 200px; /* 設定寬度 */
+        border-left: 2px dashed var(--border-color); /* 左邊加虛線與內容區隔 */
+        padding: 20px;
+        overflow-y: auto;
+    }
 
     .user-item {
         margin-bottom: 15px;
@@ -313,15 +342,30 @@
         z-index: 2000; 
         left: 0; top: 0; 
         width: 100%; height: 100%; 
-        background-color: rgba(0,0,0,0.5);
+        background-color: rgba(0,0,0,0.8);
     }
 
     .modal-content {
         background: var(--bg-color);
-        margin: 15% auto;
+        margin: 10% auto;       /* 彈窗在畫面中央 */
         padding: 20px;
         border: 1px solid var(--border-color);
-        width: 50%;
+        width: 500px;           /* 彈窗寬度固定 */
+        max-height: 80vh;       /* 彈窗最大高度 */
+        overflow-y: auto;       /* 內容過長時滾動 */
+        min-height: auto;       /* 移除不必要的 100vh */
+    }
+
+    #main-content > h1, 
+    #main-content > #hot-posts, 
+    #main-content > .post {
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--border-color); /* 橫線區隔 */
+    }
+
+    #main-content > .post:last-child {
+        border-bottom: none;
     }
 
     </style>
@@ -333,8 +377,6 @@
             <div id="historyContent"></div>
         </div>
     </div>
-
-    </span>
 
     <div id="profileModal" class="modal">
         <div class="modal-content">
