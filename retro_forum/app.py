@@ -62,28 +62,28 @@ def get_device_id():
 
 @app.route('/')
 def index():
-    # 檢查是否有現有的 device_id
+    # 1. 取得當前裝置的 ID
     device_id = request.cookies.get('device_id')
-    needs_cookie = False
-    
     if not device_id:
         device_id = str(uuid.uuid4())
-        needs_cookie = True
-        
+        # 這裡還不寫入 Cookie，等最後再一起處理
+    
     db = get_db()
     with db.cursor() as cur:
-        # 正確的寫法：只需要一次 SELECT
-        cur.execute('SELECT username, bio FROM users WHERE status = %s', ('active',))
+        # 2. 修改：只撈取「狀態為 active 且 current_device_id 為當前裝置」的用戶
+        # 如果是公開論壇，您可能想顯示所有 active 的人，但若要「互不干擾」，這裡就要過濾
+        cur.execute('SELECT username, bio FROM users WHERE status = %s AND current_device_id = %s', 
+                    ('active', device_id))
         user_list = cur.fetchall()
         
-        # 撈取貼文
+        # 撈取貼文 (視需求，如果要限制只能看到該裝置用戶發的文，也要加條件)
         cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY id DESC', ('deleted',))
         posts = cur.fetchall()
         
-    # 設定 Response
     resp = make_response(render_template('index.html', user_list=user_list, posts=posts, current_user=session.get('current_user')))
-    if needs_cookie:
-        resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10, httponly=True)
+    
+    # 確保 Cookie 被寫入
+    resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10, httponly=True)
     return resp
 
 @app.route('/register', methods=['POST'])
@@ -104,14 +104,10 @@ def register():
             session['current_user'] = username
     return redirect(url_for('index'))
 
-app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username', '').strip()
-    device_id = request.cookies.get('device_id') # 嚴格讀取當前裝置的 ID
-    
-    if not device_id:
-        flash('無法識別裝置，請重新整理頁面。', 'error')
-        return redirect(url_for('index'))
+    device_id = request.cookies.get('device_id')
     
     db = get_db()
     with db.cursor() as cur:
@@ -119,11 +115,11 @@ def login():
         user = cur.fetchone()
         
         if user:
-            # 檢查：如果該帳號已經被別的裝置佔用
+            # 如果這帳號已經被別的裝置佔用了
             if user['current_device_id'] and user['current_device_id'] != device_id:
-                flash('此帳號已在其他裝置登入！', 'error')
+                flash('此帳號已在其他裝置登入中！', 'error')
             else:
-                # 綁定成功
+                # 登入成功，將此裝置 ID 綁定到該帳號
                 cur.execute('UPDATE users SET status = %s, current_device_id = %s WHERE username = %s', 
                             ('active', device_id, username))
                 db.commit()
