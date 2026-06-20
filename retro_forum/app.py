@@ -21,16 +21,20 @@ def get_db():
 def init_db():
     db = get_db()
     with db.cursor() as cur:
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS users (
+        # 新增欄位 (安全執行)
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS permission VARCHAR(20) DEFAULT '初級'")
+        cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0")
+        cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS board VARCHAR(50) DEFAULT '一般討論'")
+        
+        # 維持原本的 Table 建立邏輯
+        cur.execute('''CREATE TABLE IF NOT EXISTS users (
                 username VARCHAR(50) PRIMARY KEY,
                 status VARCHAR(10) DEFAULT 'hidden',
                 current_device_id TEXT DEFAULT NULL,
-                bio TEXT DEFAULT ''
-            )
-        ''')
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS posts (
+                bio TEXT DEFAULT '',
+                permission VARCHAR(20) DEFAULT '初級'
+            )''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS posts (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(50),
                 title TEXT,
@@ -38,9 +42,10 @@ def init_db():
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status VARCHAR(10) DEFAULT 'visible',
                 is_edited BOOLEAN DEFAULT FALSE,
-                edit_history TEXT DEFAULT '[]'
-            )
-        ''')
+                edit_history TEXT DEFAULT '[]',
+                likes INTEGER DEFAULT 0,
+                board VARCHAR(50) DEFAULT '一般討論'
+            )''')
         db.commit()
 
 @app.teardown_appcontext
@@ -62,29 +67,32 @@ def get_device_id():
 
 @app.route('/')
 def index():
-    # 1. 取得當前裝置的 ID
-    device_id = request.cookies.get('device_id')
-    if not device_id:
-        device_id = str(uuid.uuid4())
-        # 這裡還不寫入 Cookie，等最後再一起處理
-    
+    device_id = request.cookies.get('device_id') or str(uuid.uuid4())
     db = get_db()
     with db.cursor() as cur:
-        # 2. 修改：只撈取「狀態為 active 且 current_device_id 為當前裝置」的用戶
-        # 如果是公開論壇，您可能想顯示所有 active 的人，但若要「互不干擾」，這裡就要過濾
-        cur.execute('SELECT username, bio FROM users WHERE status = %s AND current_device_id = %s', 
-                    ('active', device_id))
+        # 1. 取得活躍使用者 (保持原邏輯)
+        cur.execute('SELECT username, bio, permission FROM users WHERE status = %s', ('active',))
         user_list = cur.fetchall()
         
-        # 撈取貼文 (視需求，如果要限制只能看到該裝置用戶發的文，也要加條件)
+        # 2. 取得熱門貼文 (新增)
+        cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY likes DESC LIMIT 5', ('deleted',))
+        hot_posts = cur.fetchall()
+        
+        # 3. 取得所有貼文 (保持原邏輯)
         cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY id DESC', ('deleted',))
         posts = cur.fetchall()
-        
-    resp = make_response(render_template('index.html', user_list=user_list, posts=posts, current_user=session.get('current_user')))
-    
-    # 確保 Cookie 被寫入
+
+    resp = make_response(render_template('index.html', user_list=user_list, posts=posts, hot_posts=hot_posts, current_user=session.get('current_user')))
     resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10, httponly=True)
     return resp
+
+@app.route('/like_post/<int:post_id>')
+def like_post(post_id):
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('UPDATE posts SET likes = likes + 1 WHERE id = %s', (post_id,))
+        db.commit()
+    return redirect(url_for('index'))
 
 @app.route('/register', methods=['POST'])
 def register():
