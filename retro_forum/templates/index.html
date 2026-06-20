@@ -47,6 +47,27 @@
             {% endfor %}
         </div>
     </div>
+
+    <div id="hot-posts">
+        <h2>【熱門貼文 TOP 5】</h2>
+        {% for post in hot_posts %}
+        <div class="post">
+            <p>① #{{ post.id }} 〈{{ post.title }}〉</p>
+            <p>發佈者：{{ post.username }} | 回覆：0 | ♡ {{ post.likes }}</p>
+            <p>[{{ post.board }}]</p>
+            <a href="{{ url_for('like_post', post_id=post.id) }}">按讚</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="boards">
+        <h2>【板塊列表】</h2>
+        <ul>
+            <li>一般討論</li>
+            <li>職場討論</li>
+            <li>遊戲討論</li>
+        </ul>
+    </div>
     
     <div id="main-content">
         <h1>=== Midnight Signal Forum ===</h1>
