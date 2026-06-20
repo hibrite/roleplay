@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ post.title }} - 深夜訊號</title>
+</head>
+<body>
+    <div id="main-content">
+        <a href="/">← 返回首頁</a>
+        
+        <div class="post">
+            <h1>{{ post.title }}</h1>
+            <p>發文者：{{ post.username }} | 板塊：{{ post.board }}</p>
+            <hr>
+            <p>{{ post.content }}</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div id="comments-section">
+            <h3>留言 ({{ comments|length }})</h3>
+            {% if comments %}
+                {% for comment in comments %}
+                <div class="comment">
+                    <strong>{{ comment.username }}</strong> 
+                    <small>{{ comment.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                    <p>{{ comment.content }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>目前尚無留言，快來搶頭香！</p>
+            {% endif %}
+        </div>
+
+        {% if session.get('current_user') %}
+            <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST">
+                <textarea name="content" placeholder="在此輸入留言..." required maxlength="500"></textarea>
+                <button type="submit">發布留言</button>
+            </form>
+        {% else %}
+            <p><a href="/">登入後即可留言</a></p>
+        {% endif %}
+        
+    </div> 
+</body>
+</html>
