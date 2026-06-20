@@ -26,6 +26,13 @@ def init_db():
         cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0")
         cur.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS board VARCHAR(50) DEFAULT '一般討論'")
         
+        cur.execute('''CREATE TABLE IF NOT EXISTS comments (
+            id SERIAL PRIMARY KEY,
+            post_id INTEGER REFERENCES posts(id),
+            username VARCHAR(50),
+            content TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
         # 維持原本的 Table 建立邏輯
         cur.execute('''CREATE TABLE IF NOT EXISTS users (
                 username VARCHAR(50) PRIMARY KEY,
@@ -70,19 +77,15 @@ def index():
     device_id = request.cookies.get('device_id') or str(uuid.uuid4())
     db = get_db()
     with db.cursor() as cur:
-        # 1. 取得活躍使用者 (保持原邏輯)
-        cur.execute('SELECT username, bio, permission FROM users WHERE status = %s', ('active',))
-        user_list = cur.fetchall()
+        # 1. 抓取所有貼文 (用於主頁)
+        cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY id DESC', ('deleted',))
+        posts = cur.fetchall()
         
-        # 2. 取得熱門貼文 (新增)
+        # 2. 抓取熱門貼文 (用於側邊欄)
         cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY likes DESC LIMIT 5', ('deleted',))
         hot_posts = cur.fetchall()
         
-        # 3. 取得所有貼文 (保持原邏輯)
-        cur.execute('SELECT * FROM posts WHERE status != %s ORDER BY id DESC', ('deleted',))
-        posts = cur.fetchall()
-
-    resp = make_response(render_template('index.html', user_list=user_list, posts=posts, hot_posts=hot_posts, current_user=session.get('current_user')))
+    resp = make_response(render_template('index.html', posts=posts, hot_posts=hot_posts, current_user=session.get('current_user')))
     resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10, httponly=True)
     return resp
 
@@ -248,6 +251,43 @@ def edit_post(post_id):
             db.commit()
             
     return redirect(url_for('index'))
+
+@app.route('/add_comment/<int:post_id>', methods=['POST'])
+def add_comment(post_id):
+    if 'current_user' not in session:
+        flash('請先登入後再留言！', 'error')
+        return redirect(url_for('view_post', post_id=post_id))
+    
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('留言內容不能為空！', 'error')
+        return redirect(url_for('view_post', post_id=post_id))
+
+    db = get_db()
+    with db.cursor() as cur:
+        # 檢查貼文是否存在
+        cur.execute('SELECT id FROM posts WHERE id = %s AND status != %s', (post_id, 'deleted'))
+        if not cur.fetchone():
+            flash('此貼文不存在。', 'error')
+            return redirect(url_for('index'))
+            
+        cur.execute('INSERT INTO comments (post_id, username, content) VALUES (%s, %s, %s)', 
+                    (post_id, session['current_user'], content))
+        db.commit()
+        
+    return redirect(url_for('view_post', post_id=post_id))
+
+@app.route('/post/<int:post_id>')
+def view_post(post_id):
+    db = get_db()
+    with db.cursor() as cur:
+        # 獲取貼文
+        cur.execute('SELECT * FROM posts WHERE id = %s', (post_id,))
+        post = cur.fetchone()
+        # 獲取留言
+        cur.execute('SELECT * FROM comments WHERE post_id = %s ORDER BY timestamp ASC', (post_id,))
+        comments = cur.fetchall()
+    return render_template('post_detail.html', post=post, comments=comments, current_user=session.get('current_user'))
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
