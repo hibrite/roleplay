@@ -62,9 +62,14 @@ def get_device_id():
 
 @app.route('/')
 def index():
-    # 確保每個訪問的人都有 device_id
-    device_id = get_device_id()
-
+    # 檢查是否有現有的 device_id
+    device_id = request.cookies.get('device_id')
+    needs_cookie = False
+    
+    if not device_id:
+        device_id = str(uuid.uuid4())
+        needs_cookie = True
+        
     db = get_db()
     with db.cursor() as cur:
         # 正確的寫法：只需要一次 SELECT
@@ -77,7 +82,8 @@ def index():
         
     # 設定 Response
     resp = make_response(render_template('index.html', user_list=user_list, posts=posts, current_user=session.get('current_user')))
-    resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10, httponly=True)
+    if needs_cookie:
+        resp.set_cookie('device_id', device_id, max_age=60*60*24*365*10, httponly=True)
     return resp
 
 @app.route('/register', methods=['POST'])
@@ -98,13 +104,13 @@ def register():
             session['current_user'] = username
     return redirect(url_for('index'))
 
-@app.route('/login', methods=['POST'])
+app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username', '').strip()
-    device_id = request.cookies.get('device_id')
-
+    device_id = request.cookies.get('device_id') # 嚴格讀取當前裝置的 ID
+    
     if not device_id:
-        flash('無法識別您的裝置，請確認瀏覽器已啟用 Cookie。', 'error')
+        flash('無法識別裝置，請重新整理頁面。', 'error')
         return redirect(url_for('index'))
     
     db = get_db()
@@ -113,10 +119,11 @@ def login():
         user = cur.fetchone()
         
         if user:
-            # 檢查是否已綁定且裝置不符
-            if user['status'] == 'active' and user['current_device_id'] != device_id:
+            # 檢查：如果該帳號已經被別的裝置佔用
+            if user['current_device_id'] and user['current_device_id'] != device_id:
                 flash('此帳號已在其他裝置登入！', 'error')
             else:
+                # 綁定成功
                 cur.execute('UPDATE users SET status = %s, current_device_id = %s WHERE username = %s', 
                             ('active', device_id, username))
                 db.commit()
