@@ -70,7 +70,7 @@
                         {% if post.is_edited %}
                             <span onclick="openHistoryModal('{{ post.edit_history | replace("'", "\\'") }}')" 
                                 style="cursor:pointer; color:gray; font-size: 0.8em; text-decoration: underline;">
-                                [查看紀錄]
+                                [編輯紀錄]
                             </span>
                         {% endif %}
                     </h3>
@@ -81,7 +81,7 @@
                             {{ post.username }}
                         </span>
                     </small>
-                    
+
                     <p>{{ post.content }}</p>
 
                     {% if post.username == current_user and '_deleted_' not in post.username %}
@@ -202,16 +202,17 @@
         }
 
         // 在頁面載入時，將貼文內容中的 @ 轉換為點擊事件
+        // 在 DOMContentLoaded 事件中，將原本的 style 字串改為使用 class="mention"
         document.addEventListener('DOMContentLoaded', () => {
             const posts = document.querySelectorAll('.post p');
             posts.forEach(p => {
                 let content = p.innerHTML;
-                // 使用 Regex 尋找 @ 後接的文字 (數字、字母、底線)
                 content = content.replace(/@(\w+)/g, (match, username) => {
                     if (userMap.hasOwnProperty(username)) {
-                        return `<span onclick="openProfileModal('${username}')" style="cursor:pointer; color: #4a90e2; text-decoration: underline;">${match}</span>`;
+                        // 改用 class="mention" 來套用 CSS，而不是直接寫 style
+                        return `<span class="mention" onclick="openProfileModal('${username}')">${match}</span>`;
                     }
-                    return match; // 若用戶不存在則維持原樣
+                    return match; 
                 });
                 p.innerHTML = content;
             });
@@ -220,61 +221,89 @@
     </script>
 
     <style>
-        :root { 
-            --bg-color: #000000; --text-color: #a1a1a1; --border-color: #a1a1a1; 
-            --active-bg: rgba(255, 255, 255, 0.15); 
-        }
-        .day-mode { 
-            --bg-color: #ffffff; --text-color: #000000; --border-color: #000000; 
-            --active-bg: rgba(0, 0, 0, 0.15); 
-        }
-        
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', monospace; margin: 0; padding: 20px; display: flex; height: 100vh; transition: all 0.3s; }
-        
-        /* 修正後的選定狀態樣式 */
-        .user-item.active {
-            background-color: var(--active-bg) !important;
-            border: 1px solid var(--text-color) !important;
-        }
-        
-        #sidebar { width: 250px; border-right: 2px dashed var(--border-color); padding-right: 20px; display: flex; flex-direction: column; }
-        #main-content { flex: 1; padding-left: 20px; overflow-y: auto; }
-        .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; }
-        /* 1. 讓每個帳號區塊有間距 */
-        .user-item {
-            margin-bottom: 15px; /* 增加帳號之間的垂直距離 */
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
+    :root { 
+        --bg-color: #000000; 
+        --text-color: #a1a1a1; 
+        --border-color: #a1a1a1; 
+        --active-bg: rgba(255, 255, 255, 0.15); 
+        /* 新增：暗色模式下的亮藍色 */
+        --mention-color: #669174; 
+    }
 
-        /* 2. 縮小按鈕並排顯示 */
-        .user-actions {
-            display: flex; /* 讓按鈕並排 */
-            gap: 5px;      /* 按鈕之間的間距 */
-            margin-top: 5px;
-        }
+    .day-mode { 
+        --bg-color: #ffffff; 
+        --text-color: #000000; 
+        --border-color: #000000; 
+        --active-bg: rgba(0, 0, 0, 0.15); 
+        /* 新增：亮色模式下的深藍色 */
+        --mention-color: #2e573c; 
+    }
 
-        .btn-small {
-            padding: 2px 8px;  /* 縮小按鈕內距 */
-            font-size: 12px;   /* 縮小字體大小 */
-            cursor: pointer;
-        }
+    body { 
+        background-color: var(--bg-color); 
+        color: var(--text-color); 
+        font-family: 'Courier New', monospace; 
+        margin: 0; 
+        padding: 20px; 
+        display: flex; 
+        height: 100vh; 
+        transition: all 0.3s; 
+    }
 
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 2000; 
-            left: 0; top: 0; 
-            width: 100%; height: 100%; 
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background: var(--bg-color);
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid var(--border-color);
-            width: 50%;
-        }
+    /* 提及樣式 */
+    .mention {
+        cursor: pointer;
+        text-decoration: none !important; /* 移除底線 */
+        color: var(--mention-color);      /* 使用上面定義的變數 */
+        font-weight: bold;
+        transition: background 0.2s;
+        padding: 0 2px;
+        border-radius: 3px;
+    }
+
+    .mention:hover {
+        background: var(--active-bg);     /* 滑鼠懸停時顯示與選取帳號相同的背景色 */
+    }
+
+    /* 其他原本的樣式保持不變 */
+    .user-item.active {
+        background-color: var(--active-bg) !important;
+        border: 1px solid var(--text-color) !important;
+    }
+
+    #sidebar { width: 250px; border-right: 2px dashed var(--border-color); padding-right: 20px; display: flex; flex-direction: column; }
+    #main-content { flex: 1; padding-left: 20px; overflow-y: auto; }
+    .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; }
+
+    .user-item {
+        margin-bottom: 15px;
+        padding: 10px;
+        border-bottom: 1px solid var(--border-color); /* 修正顏色 */
+    }
+
+    .user-actions {
+        display: flex;
+        gap: 5px;
+        margin-top: 5px;
+    }
+
+    .modal {
+        display: none; 
+        position: fixed; 
+        z-index: 2000; 
+        left: 0; top: 0; 
+        width: 100%; height: 100%; 
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+        background: var(--bg-color);
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+        width: 50%;
+    }
+
     </style>
 
     <div id="historyModal" class="modal">
